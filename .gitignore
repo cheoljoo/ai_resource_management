@@ -224,3 +224,6 @@ __marimo__/
 
 # VS Code MCP config (contains personal access tokens)
 .vscode/mcp.json
+
+# intents/<날짜>-<slug>/worktree/ — 해당 intent 작업 전용 git worktree (커밋 대상 아님)
+intents/*/worktree/
