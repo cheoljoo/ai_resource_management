@@ -136,10 +136,11 @@
       5~7개 질문, Red/Yellow/Green + 자유 서술)을 예시로 추가한다(리서치 반영, company-practices.md §5-4).
 
 ### 5. Jira 갱신
-- [ ] 작업 완료 후 AGILEDEV-1118에 진행 요약 댓글을 남긴다(사용자 확인 필요 — 이 저장소가
-      `~/.claude/CLAUDE.md`의 자동 댓글 규칙 대상인지 재확인. 대상이면 그 규칙을 그대로 따르고, 아니면
-      사용자에게 직접 물어본다).
-- [ ] 필요하면 이슈 상태를 갱신한다(`In Progress` → 다음 상태, 사용자 확인 후).
+- [x] 작업 완료 후 AGILEDEV-1118에 진행 요약 댓글을 남김 — 커밋 `bb2fb2e`, `~/.claude/CLAUDE.md`의
+      티켓 확인/댓글 규칙에 따라 `AskUserQuestion`으로 확인 후 `jira_add_comment`로 게시 완료
+      (comment id 43131927).
+- [ ] 이슈 상태 갱신은 보류 — 사용자가 별도로 요청하지 않는 한 `In Progress` 유지(추가 검증/피드백
+      반영 가능성 고려).
 
 이 저장소에는 `test.md`/`plan.md`(루트)/`log.md` 같은 별도 결정 로그 관례가 아직 없다 — 대신
 `/wiki-log` 스킬로 llm_wiki 중앙 저장소에 세션 로그를 남기는 관례가 있으므로, 작업 완료 후 `/wiki-log`
