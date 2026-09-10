@@ -23,7 +23,9 @@ python3 <script>.py --repo /path/to/target/repo [옵션들]
 | 2.1 변경 리드 타임 | [lead_time.py](scripts/dev_metrics/lead_time.py) | ✅ 즉시 가능 (부분) | merge commit 기준으로, 병합된 브랜치의 가장 오래된 커밋 ~ merge 시각까지의 시간차를 계산 | Gerrit First-Upload 실제 시각 등은 Gerrit API 필요 |
 | 2.2 몰입 시간 확보율 (Focus Time) | [focus_time.py](scripts/dev_metrics/focus_time.py) | ✅ Git 부분만 / ⏭️ Teams 제외 | 작성자별 커밋 타임스탬프 간격이 임계값(기본 120분) 이내면 하나의 Focus 세션으로 묶어 추정 몰입 시간 산출 (Inter-Event Gap 휴리스틱) | Teams 캘린더 기반 Inverse Calendar Block 분석은 범위 제외 |
 | 4.1 선행 검증/PoC 수행 능력 | [poc_branch_history.py](scripts/dev_metrics/poc_branch_history.py) | ✅ 즉시 가능 (부분) | 브랜치별 최초/최근 커밋 시각, 커밋 수, base 브랜치 병합 여부 집계. `poc/`, `spike/`, `experiment/`, `prototype/` 접두사 브랜치를 PoC 후보로 표시 | Collab POC 보고서 존재 여부는 Confluence API 필요 |
-| 5.1 번아웃 위험도 | [burnout_signals.py](scripts/dev_metrics/burnout_signals.py) | ✅ Git 부분만 / ⏭️ Teams 제외 | 작성자별 야간(기본 21시~07시)·주말 커밋 비율 집계 | Teams 회의 시간 합산은 범위 제외. 평가가 아닌 웰빙 케어 알림 용도로만 사용 |
+| 5.1 번아웃 위험도 | [burnout_signals.py](scripts/dev_metrics/burnout_signals.py) | ✅ Git / 🔑 Jira / 🚫 Teams 정책상 영구 제외 | 작성자별 야간(기본 21시~07시)·주말 커밋 비율 집계 | 회의 시간 데이터는 회사 정책상 영구 조회 불가(developer_evaluation_metrics.md 1.2절). 평가가 아닌 웰빙 케어 알림 용도로만 사용 |
+| 신규: 활동 폭/다양성 (6.3절) | [activity_breadth.py](scripts/dev_metrics/activity_breadth.py) | ✅ 즉시 가능 (로컬 다중 저장소) | 여러 저장소에 걸친 커밋·변경 라인 수·파일 확장자(기술 스택) 다양성 집계. 저장소당 최소 변경 라인 수 임계치로 "사소한 커밋 흩뿌리기" 게이밍 방지(1.3절) | GitHub/Gerrit/Jira까지 포함한 전사 범위 다양성은 API 필요(6.3절) |
+| 신규: 종합 로직 (spec.md 완료조건 3·8) | [composite_signals.py](scripts/dev_metrics/composite_signals.py) | ✅ 즉시 가능 (위 스크립트들을 조합) | 5대 대항목별 밴드(관찰 필요/양호/우수/데이터 없음)를 산출하고, 이를 조합해 **지속적 고기여 인정 신호**·**지속적 저활동 경고 신호**(1.6절) 두 가지를 계산. 최소 3개 대항목 데이터 가드레일, 단일 지표 금지, 트리거일 뿐이라는 경고 문구 포함 | 3.협업(코드 리뷰) 대항목은 Gerrit API 없이는 항상 "데이터 없음" — 임계치는 1차 하드코딩(실측 데이터로 추후 보정 필요) |
 | (공통 유틸) | [git_utils.py](scripts/dev_metrics/git_utils.py) | - | 위 스크립트들이 공유하는 `git log`/`git branch` 파싱 헬퍼 (`Commit` dataclass, `iter_commits`, `list_branches`, `default_branch`) | - |
 
 ## 코드화하지 않은 항목과 이유
@@ -52,3 +54,21 @@ python3 scripts/dev_metrics/complexity.py --path /path/to/yt-dlp/yt_dlp/utils
 * [scripts/dev_metrics/gerrit_metrics.py](scripts/dev_metrics/gerrit_metrics.py) — `gerrit_fetch.py` 결과 JSON을 입력받아 1.1 재작업률(Patchset 수 분포), 상태 분포, 2.1 리드 타임(Gerrit `created`~`updated`), 변경 규모, 프로젝트별 분포를 계산.
 * [scripts/dev_metrics/jira_metrics.py](scripts/dev_metrics/jira_metrics.py) — 기존 `~/code/_worklog` 도구로 수집한 Jira CSV를 입력받아 상태/이슈타입/우선순위 분포와 월별 추이를 계산.
 * `focus_time.py`, `burnout_signals.py`에 `--author` 옵션을 추가해 특정 작성자로 범위를 좁혀 자기 진단 목적으로 사용할 수 있게 함.
+
+## 추가 (3차 작업, AGILEDEV-1118): 활동 폭/다양성 신규 지표 + 종합 로직 (데이터 우선 원칙)
+
+2026-09 사용자 결정(회사 모니터링 정책, 데이터 우선 원칙, 데이터 기반 극단값 해석의 비대칭 원칙 —
+[developer_evaluation_metrics.md](developer_evaluation_metrics.md) 1.2~1.6절, [intents/2026-09-09-developer-expertise-grading/spec.md](intents/2026-09-09-developer-expertise-grading/spec.md) 참고)에
+따라 아래 두 스크립트를 추가했다. 설문/자기보고는 사용하지 않으며, 시스템 메타데이터만 입력으로 받는다.
+
+* [scripts/dev_metrics/activity_breadth.py](scripts/dev_metrics/activity_breadth.py) — 여러 로컬 git 저장소에
+  걸친 커밋/변경 라인 수/파일 확장자 다양성을 집계해 원 티켓의 "얼마나 많은 분야에서 활동하는가" 요구에
+  대응한다. 본인(cheoljoo.lee) 계정으로 5개 실 저장소(`llm_wiki`, `sage-wiki`, `cheoljoo.github.io`,
+  `pvs_crawler`, `ccr`)를 대상으로 실행해 정상 동작 확인 — 5개 저장소 모두 임계치(20줄) 이상 실질
+  기여로 인정되었고, 22개 서로 다른 파일 확장자(기술 스택)가 확인됨.
+* [scripts/dev_metrics/composite_signals.py](scripts/dev_metrics/composite_signals.py) — 위 스크립트들을
+  오케스트레이션해 5대 대항목 밴드 + 지속적 고기여 인정 신호/지속적 저활동 경고 신호를 산출. 같은 5개
+  저장소·본인 계정으로 실행한 결과, "고기여 인정 신호" 발생(3개 대항목 우수 + 품질 지표 양호), "경고
+  신호"는 미발생(관찰 필요 0개)을 확인 — 실행 결과 예시는
+  [self_performance_report_2026-08.md](self_performance_report_2026-08.md)의 "AGILEDEV-1118 데이터
+  전용 종합 신호 실행 결과" 절 참고.
