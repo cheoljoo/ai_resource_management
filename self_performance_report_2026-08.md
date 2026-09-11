@@ -141,6 +141,21 @@ python3 composite_signals.py --repo ~/code/llm_wiki \
 * **재확인**: 인정 신호(🟢 발생)·경고 신호(⚪ 미발생) 결론 자체는 기존과 동일 — 이번 보강은 "왜/어떻게"
   그 결론에 도달했는지의 근거를 논문 방법론에 맞게 더 촘촘하게 만든 것이다.
 
+### 6.2 AI Flywheel 4·7·8단계 실행 결과 (2026-09-11)
+
+* **GitHub 활동 폭 확장(8단계)** — `python3 github_activity.py --login cheoljoo --min-commits 3`:
+  총 커밋 기여 184건, 실질 기여 저장소(3커밋 이상) 15개, 언어 3종(Python/JavaScript/HTML). 사내
+  GitLab/Gerrit 활동과 별도 집계이며, 4.4절 활동 폭/다양성 지표에 합산 가능한 형태로 확인.
+* **임계치 재보정 루프(7단계)** — `composite_signals.py --log-history`로 5개 저장소(llm_wiki,
+  sage-wiki, ccr, pvs_crawler, cheoljoo.github.io) 실행 이력을 누적한 뒤 `run_history.py --show`로
+  재보정 제안을 확인: 1.2(확정적 재수정 비율) 현재 임계치 0.15 vs 실측 75백분위 0.31, 변경 실패
+  신호 비율 0.05 vs 0.03, 리드 타임 중앙값 120h vs 200.3h, 야간 커밋 비율 30% vs 45.4%, 주말 커밋
+  비율 20% vs 21.2%. **자동 반영은 하지 않았음** — 표본 5개는 재보정을 확정하기엔 적어 참고용으로만
+  기록.
+* **아키텍처 결정(4단계)** — 코드 변경 없이 결정 문서화만 진행(`developer_evaluation_metrics.md`
+  1.8절): 현재의 "Claude Code + 결정론적 Python 스크립트(LLM 추론 없음)" 구조를 PoC 단계 공식
+  아키텍처로 유지.
+
 ---
 
 ## 7. 재현 방법 (Reproducibility)
@@ -188,6 +203,13 @@ python3 activity_breadth.py --repos ~/code/llm_wiki ~/code/sage-wiki \
 python3 composite_signals.py --repo ~/code/llm_wiki \
   --repos ~/code/llm_wiki ~/code/sage-wiki ~/code/cheoljoo.github.io ~/code/pvs_crawler ~/code/ccr \
   --author "cheoljoo" --raw
+
+# AGILEDEV-1118: AI Flywheel 4·7·8단계 (6.2절 결과 재현)
+python3 github_activity.py --login cheoljoo --min-commits 3
+for repo in llm_wiki sage-wiki ccr pvs_crawler cheoljoo.github.io; do
+  python3 composite_signals.py --repo ~/code/$repo --author "cheoljoo" --log-history
+done
+python3 run_history.py --show
 ```
 
 > 원본 JSON/CSV는 개인 작업 상세 내용(티켓 제목, 커밋 메시지 등)을 포함하므로 `/tmp`에만 저장했고 이 저장소에는 커밋하지 않았다.

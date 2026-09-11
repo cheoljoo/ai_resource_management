@@ -105,3 +105,17 @@ PwC GenAI Flywheel 진단(plan.md 참고)에서 식별한 "가장 유력한 다�
   범위 제약(2026-09-11 사용자 결정): 최근 14일(2주)치 커밋만 사용** — 전체 이력 확장은 이 PoC 결과를
   보고 별도 판단. 다중 기여자 실 저장소 `pvs_crawler`(4명, 86 커밋/14일)로 실행 검증 — 모듈별 1순위
   기여자와 특정 모듈(`SWPMUtil/sage`) 조회 모두 정상 동작 확인.
+
+## 추가 (6차 작업, AGILEDEV-1118): AI Flywheel 4·7·8단계 실행 (2026-09-11)
+
+* [scripts/dev_metrics/github_activity.py](scripts/dev_metrics/github_activity.py) — **8단계(인접
+  확장)**. `gh` CLI(이미 인증된 세션)로 GraphQL `contributionsCollection`을 조회해 6.3절의 GitHub
+  활동 폭/다양성 확장을 실제로 구현. 본인(cheoljoo) 계정으로 실행 검증: 총 커밋 기여 184건, 실질
+  기여 저장소 15개, 언어 3종.
+* [scripts/dev_metrics/run_history.py](scripts/dev_metrics/run_history.py) — **7단계(배포·테스트·
+  학습 루프)**. `composite_signals.py --log-history` 실행마다 원시 근거치를 로컬 JSON Lines로
+  누적하고, 샘플이 충분하면(기본 5회) 75번째 백분위 기반 임계치 재보정안을 제안. 5개 저장소로 실행
+  검증 완료 — 예: 1.2(재수정 비율) 현재 임계치 0.15 vs 실측 75백분위 0.31.
+* **4단계(파운데이션 모델/아키텍처)는 코드 변경 없이 결정 문서화만 진행** —
+  `developer_evaluation_metrics.md` 1.8절 참고. 현재 아키텍처(Claude Code + 결정론적 Python
+  스크립트, LLM 추론 없음)를 PoC 단계 공식 아키텍처로 채택, 정식 스케줄/다인원 확장 시 재검토.

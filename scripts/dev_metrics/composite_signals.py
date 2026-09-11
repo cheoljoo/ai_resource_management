@@ -35,6 +35,7 @@ from lead_time import compute_lead_times
 from monthly_activity_clusters import compute_clusters
 from poc_branch_history import analyze_branch, default_branch as detect_default_branch, list_branches
 from refix_frequency import compute_refix_events
+from run_history import append_run
 
 BAND_WATCH = "관찰 필요"
 BAND_OK = "양호"
@@ -229,6 +230,11 @@ def main() -> None:
         "--raw", action="store_true",
         help="대항목별 원시 근거 수치를 함께 출력 (기본은 밴드만 출력)",
     )
+    parser.add_argument(
+        "--log-history", action="store_true",
+        help="이번 실행 결과를 run_history.py의 실행 이력에 누적 기록 (AI Flywheel 7단계 —"
+        " 임계치 재보정을 위한 실측 데이터 축적, 기본은 기록하지 않음)",
+    )
     args = parser.parse_args()
 
     repos_for_breadth = args.repos or [args.repo]
@@ -242,6 +248,10 @@ def main() -> None:
             "(최소 3개 필요 — spec.md 완료조건 3번 가드레일). 프로필을 발행하지 않습니다."
         )
         return
+
+    if args.log_history:
+        append_run(profile, args.repo, args.author)
+        print("📝 이번 실행 결과를 run_history.py 이력에 기록했습니다 (`python3 run_history.py --show`로 확인).\n")
 
     print("## 대항목별 밴드 (관찰 필요 / 양호 / 우수 / 데이터 없음)\n")
     for name, (band, evidence) in profile["categories"].items():
