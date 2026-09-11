@@ -93,3 +93,15 @@ python3 scripts/dev_metrics/complexity.py --path /path/to/yt-dlp/yt_dlp/utils
 * `composite_signals.py`를 위 두 스크립트와 통합: 대항목 4 밴드 산출에 EA breadth/depth를 반영하고,
   두 종합 신호(인정/경고)의 "지속성(sustained)" 조건을 월별 클러스터링 결과(최근 연속 고활동/저활동
   개월 수)로 실제 검증하도록 변경 — 이전에는 단일 시점 스냅샷만으로 판단했던 부분을 보완.
+
+## 추가 (5차 작업, AGILEDEV-1118): 전문가 파인더(Expert Finder) POC — AI Flywheel 8단계(인접 확장)
+
+PwC GenAI Flywheel 진단(plan.md 참고)에서 식별한 "가장 유력한 다음 단계"를 PoC로 구현했다. **이
+항목만 spec.md "범위 밖" 절의 명시적 예외**로, 저장소의 모든 기여자(본인 외 타인 포함) 데이터를
+사용한다 — 공유 저장소의 이미 공개된 git log를 라우팅 목적으로만 쓰는 것으로 한정.
+
+* [scripts/dev_metrics/expert_finder.py](scripts/dev_metrics/expert_finder.py) — `experience_atoms.py`의
+  EA 방법을 저장소 전체 기여자에게 적용해 "이 모듈은 누구에게 물어볼까"를 순위로 보여준다. **PoC
+  범위 제약(2026-09-11 사용자 결정): 최근 14일(2주)치 커밋만 사용** — 전체 이력 확장은 이 PoC 결과를
+  보고 별도 판단. 다중 기여자 실 저장소 `pvs_crawler`(4명, 86 커밋/14일)로 실행 검증 — 모듈별 1순위
+  기여자와 특정 모듈(`SWPMUtil/sage`) 조회 모두 정상 동작 확인.
