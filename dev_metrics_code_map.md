@@ -25,7 +25,9 @@ python3 <script>.py --repo /path/to/target/repo [옵션들]
 | 4.1 선행 검증/PoC 수행 능력 | [poc_branch_history.py](scripts/dev_metrics/poc_branch_history.py) | ✅ 즉시 가능 (부분) | 브랜치별 최초/최근 커밋 시각, 커밋 수, base 브랜치 병합 여부 집계. `poc/`, `spike/`, `experiment/`, `prototype/` 접두사 브랜치를 PoC 후보로 표시 | Collab POC 보고서 존재 여부는 Confluence API 필요 |
 | 5.1 번아웃 위험도 | [burnout_signals.py](scripts/dev_metrics/burnout_signals.py) | ✅ Git / 🔑 Jira / 🚫 Teams 정책상 영구 제외 | 작성자별 야간(기본 21시~07시)·주말 커밋 비율 집계 | 회의 시간 데이터는 회사 정책상 영구 조회 불가(developer_evaluation_metrics.md 1.2절). 평가가 아닌 웰빙 케어 알림 용도로만 사용 |
 | 신규: 활동 폭/다양성 (6.3절) | [activity_breadth.py](scripts/dev_metrics/activity_breadth.py) | ✅ 즉시 가능 (로컬 다중 저장소) | 여러 저장소에 걸친 커밋·변경 라인 수·파일 확장자(기술 스택) 다양성 집계. 저장소당 최소 변경 라인 수 임계치로 "사소한 커밋 흩뿌리기" 게이밍 방지(1.3절) | GitHub/Gerrit/Jira까지 포함한 전사 범위 다양성은 API 필요(6.3절) |
-| 신규: 종합 로직 (spec.md 완료조건 3·8) | [composite_signals.py](scripts/dev_metrics/composite_signals.py) | ✅ 즉시 가능 (위 스크립트들을 조합) | 5대 대항목별 밴드(관찰 필요/양호/우수/데이터 없음)를 산출하고, 이를 조합해 **지속적 고기여 인정 신호**·**지속적 저활동 경고 신호**(1.6절) 두 가지를 계산. 최소 3개 대항목 데이터 가드레일, 단일 지표 금지, 트리거일 뿐이라는 경고 문구 포함 | 3.협업(코드 리뷰) 대항목은 Gerrit API 없이는 항상 "데이터 없음" — 임계치는 1차 하드코딩(실측 데이터로 추후 보정 필요) |
+| 신규: 경험 원자(EA) (4.4/1.7절) | [experience_atoms.py](scripts/dev_metrics/experience_atoms.py) | ✅ 즉시 가능 | Mockus & Herbsleb(2002) 방법론 그대로 — 커밋이 건드린 파일을 (모듈, 기술스택, 변경목적) 3축으로 분해해 EA로 누적 집계, 전문성의 폭(breadth)·깊이(depth) 산출 | EA는 "불완전하지만 합리적인" 척도(원 논문 표현) — 변경량이 곧 전문성의 질을 보장하지 않음 |
+| 신규: 월별 활동 클러스터링 (1.6/1.7절) | [monthly_activity_clusters.py](scripts/dev_metrics/monthly_activity_clusters.py) | ✅ 즉시 가능 | Montandon et al.(2019)의 비지도 클러스터링 방법을 시간축에 적용 — 본인의 월별 커밋 수를 표준 라이브러리 k=2 k-means로 고활동/저활동 클러스터로 분리, 두 신호의 "지속성(sustained)" 판단 근거 제공 | 사람 간 비교는 spec.md 범위 밖이라 시간축으로만 적용. 관측치(월) 4개 미만이면 클러스터링 미신뢰 처리 |
+| 신규: 종합 로직 (spec.md 완료조건 3·8) | [composite_signals.py](scripts/dev_metrics/composite_signals.py) | ✅ 즉시 가능 (위 스크립트들을 조합) | 5대 대항목별 밴드(관찰 필요/양호/우수/데이터 없음)를 산출하고, EA·월별 클러스터링 결과를 반영해 **지속적 고기여 인정 신호**·**지속적 저활동 경고 신호**(1.6절) 두 가지를 계산. 최소 3개 대항목 데이터 가드레일, 단일 지표 금지, 트리거일 뿐이라는 경고 문구, 클러스터링 기반 지속성 검증 포함 | 3.협업(코드 리뷰) 대항목은 Gerrit API 없이는 항상 "데이터 없음" — 밴드 임계치(리드타임 등)는 1차 하드코딩(실측 데이터로 추후 보정 필요, 클러스터링으로 대체 가능한 부분은 이미 대체함) |
 | (공통 유틸) | [git_utils.py](scripts/dev_metrics/git_utils.py) | - | 위 스크립트들이 공유하는 `git log`/`git branch` 파싱 헬퍼 (`Commit` dataclass, `iter_commits`, `list_branches`, `default_branch`) | - |
 
 ## 코드화하지 않은 항목과 이유
@@ -72,3 +74,22 @@ python3 scripts/dev_metrics/complexity.py --path /path/to/yt-dlp/yt_dlp/utils
   신호"는 미발생(관찰 필요 0개)을 확인 — 실행 결과 예시는
   [self_performance_report_2026-08.md](self_performance_report_2026-08.md)의 "AGILEDEV-1118 데이터
   전용 종합 신호 실행 결과" 절 참고.
+
+## 추가 (4차 작업, AGILEDEV-1118): 두 논문의 방법론 직접 적용 (결론 인용에서 방법 채택으로)
+
+3차 작업까지는 Mockus & Herbsleb(2002)·Montandon et al.(2019)의 **결론**만 원칙 근거로 인용하고
+실제 방법론은 구현하지 않았다는 지적을 받아, 아래 두 스크립트로 방법론 자체를 재현했다
+(developer_evaluation_metrics.md 1.7절 참고).
+
+* [scripts/dev_metrics/experience_atoms.py](scripts/dev_metrics/experience_atoms.py) — Mockus &
+  Herbsleb의 "경험 원자(Experience Atom)" 개념을 그대로 구현. 커밋이 건드린 파일을 (모듈, 기술스택,
+  변경목적) 3축으로 분해해 누적 집계하고, 전문성의 폭(breadth)·깊이(depth)를 구분해 산출. `llm_wiki`
+  기준 실행 검증: EA 701개, breadth 13개 모듈, depth 390(최심 모듈 `log`).
+* [scripts/dev_metrics/monthly_activity_clusters.py](scripts/dev_metrics/monthly_activity_clusters.py) —
+  Montandon et al.의 비지도 클러스터링 방법을, 사람 간 비교가 금지된 이 프로젝트 제약에 맞춰 **본인의
+  월별 활동을 시간축으로 클러스터링**하는 방식으로 재구성. 표준 라이브러리만으로 1차원 k=2 k-means를
+  직접 구현. `ccr` 기준 실행 검증: 저활동 클러스터 중심 8.75건/월, 고활동 클러스터 중심 29.0건/월,
+  최근 2개월 연속 저활동 클러스터로 판정.
+* `composite_signals.py`를 위 두 스크립트와 통합: 대항목 4 밴드 산출에 EA breadth/depth를 반영하고,
+  두 종합 신호(인정/경고)의 "지속성(sustained)" 조건을 월별 클러스터링 결과(최근 연속 고활동/저활동
+  개월 수)로 실제 검증하도록 변경 — 이전에는 단일 시점 스냅샷만으로 판단했던 부분을 보완.

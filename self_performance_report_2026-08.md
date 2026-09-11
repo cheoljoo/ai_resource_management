@@ -109,10 +109,37 @@ python3 composite_signals.py --repo ~/code/llm_wiki \
 * **지속적 저활동 경고 신호: ⚪ 미발생** — "관찰 필요" 구간이 0개라 발생 조건(4개 이상)에 크게 못 미침.
 
 **해석 시 주의(1.5절 비대칭 원칙 재확인)**: 위 "인정 신호"는 여러 독립 축(품질+속도+다양성)이 동시에
-높다는 신뢰할 만한 양성 신호이지만, 그렇다고 "경고 신호가 없다"는 것이 "이 사람이 항상 문제 없다"는
+높다는 신뢰할 만한 양성 지표이지만, 그렇다고 "경고 신호가 없다"는 것이 "이 사람이 항상 문제 없다"는
 뜻은 아니다 — 3.협업(코드 리뷰) 축은 이번 실행에서 아예 데이터가 없었으므로(Gerrit API 미연결) 전체
 그림의 일부만 본 것이다. 반대로 만약 경고 신호가 떴더라도 그 자체를 역량 부족의 증거로 쓰면 안 되고
 사람의 확인이 먼저다(Montandon et al. 2019, 근거는 `intents/2026-09-09-developer-expertise-grading/research/papers/montandon-identifying-experts-github.md` 참고).
+
+### 6.1 방법론 보강 재실행 — 경험 원자(EA) + 월별 클러스터링 반영 (2026-09-10)
+
+위 6장 실행은 Mockus & Herbsleb(2002)·Montandon et al.(2019)의 **결론만 원칙으로 인용**했을 뿐 실제
+방법론은 구현에 없었다는 지적을 받아, `developer_evaluation_metrics.md` 1.7절에 따라 두 방법을 직접
+구현(`experience_atoms.py`, `monthly_activity_clusters.py`)하고 `composite_signals.py`에 통합해
+재실행했다.
+
+```bash
+python3 experience_atoms.py --repo ~/code/llm_wiki --author "cheoljoo"
+python3 monthly_activity_clusters.py --repo ~/code/ccr --author "cheoljoo"
+python3 composite_signals.py --repo ~/code/llm_wiki \
+  --repos ~/code/llm_wiki ~/code/sage-wiki ~/code/cheoljoo.github.io ~/code/pvs_crawler ~/code/ccr \
+  --author "cheoljoo" --raw
+```
+
+* **경험 원자(EA, Mockus & Herbsleb 2002 방법 그대로)** — `llm_wiki` 기준 총 EA 701개, 실질 경험
+  임계치(EA≥5) 기준 breadth(폭) 13개 모듈, depth(깊이) 390 EA(최심 모듈 `log`). 대항목 4의 밴드
+  산출 근거에 `ea_breadth_module_count`/`ea_depth_max`로 편입됨(대항목 4는 여전히 "우수" 유지).
+* **월별 활동 클러스터링(Montandon et al. 2019 방법을 시간축에 적용)** — `llm_wiki`는 관측 월이
+  3개뿐이라 클러스터링 미신뢰(4개월 미만) 처리됨. 이력이 긴 `ccr`로 별도 확인한 결과 저활동 클러스터
+  중심 8.75건/월, 고활동 클러스터 중심 29.0건/월, **최근 2개월 연속 저활동 클러스터**로 판정 — 이
+  클러스터링 결과가 실제로 존재한다면 "지속적 저활동 경고 신호"의 지속성(sustained) 조건 판단에
+  쓰인다(현재 `llm_wiki` 기준 실행에서는 대항목 밴드 자체가 "관찰 필요" 0개라 경고 신호는 여전히
+  미발생).
+* **재확인**: 인정 신호(🟢 발생)·경고 신호(⚪ 미발생) 결론 자체는 기존과 동일 — 이번 보강은 "왜/어떻게"
+  그 결론에 도달했는지의 근거를 논문 방법론에 맞게 더 촘촘하게 만든 것이다.
 
 ---
 

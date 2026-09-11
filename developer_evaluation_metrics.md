@@ -114,6 +114,31 @@
   * 용도: "공무원식 시간 때우기" 패턴처럼 관리자가 놓치기 쉬운 장기 저활동을 조기에 포착해 **지원·코칭
     대화**를 시작하는 것 — 이 자체가 징계나 평가 자료가 아님을 산출물에 항상 명시한다.
 
+### 1.7 두 논문의 방법론 직접 적용 (결론 인용을 넘어선 방법 채택, 2026-09-10)
+
+1.5절은 Montandon et al.(2019)의 **결론**(비대칭적 신뢰도)만 원칙으로 인용했지만, 두 논문의 실제
+**방법론**도 아래와 같이 구현에 직접 반영했다 — 결론만 빌리고 방법은 재현하지 않는 것을 피하기 위함.
+
+* **경험 원자(Experience Atom, EA) — [Mockus & Herbsleb (2002)](intents/2026-09-09-developer-expertise-grading/research/papers/mockus-herbsleb-expertise-browser.md)
+  방법 그대로 채택**: 커밋이 건드린 파일 하나하나를 (모듈, 기술스택, 변경목적) 3축으로 분해해 EA로
+  누적 집계하고, 이를 근거로 **전문성의 폭(breadth: EA 임계치 이상인 서로 다른 모듈 수)과 깊이
+  (depth: 가장 EA가 많은 모듈의 EA 합계)를 구분**한다. 4.4절("활동 폭/다양성")이 지금까지는 "몇 개
+  저장소에 손댔는지"라는 폭만 봤다면, EA 적용으로 "한 영역을 얼마나 깊게 파고들었는지"까지 함께 본다.
+  구현: [scripts/dev_metrics/experience_atoms.py](scripts/dev_metrics/experience_atoms.py), 대항목
+  4의 밴드 산출에 편입(`composite_signals.py`).
+* **비지도 클러스터링 — [Montandon et al. (2019)](intents/2026-09-09-developer-expertise-grading/research/papers/montandon-identifying-experts-github.md)
+  방법 채택 (시간축으로 재구성)**: 원 논문은 여러 사람의 GitHub 활동을 클러스터링해 고활동/저활동
+  집단을 나눴지만, 이 프로젝트는 spec.md 제약상 동료 데이터를 모을 수 없다. 대신 **같은 사람의 여러
+  달(month)을 각각 하나의 관측치로 보고 k=2 클러스터링**해, 고정 임계치 없이 "고활동 달 클러스터"와
+  "저활동 달 클러스터"를 데이터로부터 직접 구분한다. 이 클러스터링 결과(최근 연속 몇 개월이 저활동/
+  고활동 클러스터인지)를 1.6절의 두 신호가 요구하는 **"지속성(sustained)"** 판단의 실제 근거로
+  사용한다 — 이전에는 단일 시점 스냅샷만으로 "관찰 필요 4개 이상"만 확인했지만, 이제는 월별
+  클러스터링으로 실제 추세가 뒷받침되는지까지 확인한다. 관측치(월)가 4개 미만이면 클러스터링을 신뢰할
+  수 없다고 판단해 스냅샷 기준으로만 판단하고 그 사실을 명시한다.
+  구현: [scripts/dev_metrics/monthly_activity_clusters.py](scripts/dev_metrics/monthly_activity_clusters.py)
+  (표준 라이브러리만으로 구현한 1차원 k=2 k-means), `composite_signals.py`의 인정/경고 신호 계산에
+  통합.
+
 ---
 
 ## 2. 5대 대항목별 소항목 메타데이터 분석 가능 여부 및 대안
@@ -283,8 +308,12 @@
 * **메타데이터 분석 방식**:
   * 저장소별 커밋 수와 변경 라인 수(추가+삭제)를 집계하고, 저장소당 최소 실질 기여량 임계치(기본 20줄) 이상인 저장소만 "실질 기여 저장소"로 인정한 뒤 개수를 산출.
   * 실질 기여 저장소들에서 건드린 파일 확장자(기술 스택) 종류 수를 집계.
+  * **경험 원자(EA) 기반 깊이(depth) 보강** (1.7절, Mockus & Herbsleb 2002): 저장소 내부를 (모듈,
+    기술스택, 변경목적) 3축으로 더 잘게 쪼개 EA를 누적 집계하고, breadth(EA 임계치 이상 모듈 수)와
+    depth(가장 EA가 많은 모듈의 EA 합계)를 함께 산출 — "여러 곳을 얕게" vs "한 곳을 깊게"를 구분한다.
 * **보완/주의점**: 다양성 점수를 높이려고 여러 저장소에 사소한 커밋을 흩뿌리는 게이밍 위험이 있다(1.3절 안티패턴 표 5번째 행) — 임계치 정규화로 방지한다. 1.5절 비대칭 원칙에 따라, 이 값이 "낮다"고 곧 활동 폭이 좁다는 부정적 결론을 내리지 않는다(비공개/레거시 시스템 위주 근무, 접근 권한 제약 등 다른 설명이 항상 가능).
-* **구현**: [scripts/dev_metrics/activity_breadth.py](scripts/dev_metrics/activity_breadth.py) (dev_metrics_code_map.md 참고).
+* **구현**: [scripts/dev_metrics/activity_breadth.py](scripts/dev_metrics/activity_breadth.py) (저장소 단위 폭),
+  [scripts/dev_metrics/experience_atoms.py](scripts/dev_metrics/experience_atoms.py) (모듈 단위 폭/깊이).
 
 ---
 

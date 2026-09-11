@@ -28,6 +28,12 @@
    **지속적 저활동 경고 신호(Warning Sign)** 두 가지를 산출한다. 둘 다 여러 독립 축의 조합으로만
    계산하며(단일 지표 금지), 결과 리포트에는 "이 신호는 최종 판단이 아니라 사람의 확인이 필요하다는
    트리거"라는 문구와 1.5절의 근거(Montandon et al. 2019의 비대칭적 신뢰도)를 함께 명시한다.
+9. **인용한 논문의 방법론을 결론뿐 아니라 실제로 구현에 반영(2026-09-10 사용자 지적 반영)**:
+   Mockus & Herbsleb(2002)의 경험 원자(EA) 방법과 Montandon et al.(2019)의 비지도 클러스터링 방법을
+   `developer_evaluation_metrics.md` 1.7절에 명시하고, 각각 `experience_atoms.py`(대항목 4의 폭/깊이
+   산출에 편입)와 `monthly_activity_clusters.py`(사람 간 비교가 아니라 본인의 시간축에 적용 — spec.md
+   범위 제약 준수)로 구현해 `composite_signals.py`에 통합한다. 두 신호의 "지속성(sustained)" 조건은
+   더 이상 단일 시점 스냅샷이 아니라 월별 클러스터링 결과(최근 연속 고활동/저활동 개월 수)로 검증한다.
 
 ## 범위 밖 (Out of scope)
 

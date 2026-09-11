@@ -29,8 +29,10 @@ from datetime import datetime, timezone
 from activity_breadth import compute_activity_breadth
 from burnout_signals import compute_burnout_signals
 from change_failure_signals import find_hotfix_branches, find_keyword_commits, find_revert_commits
+from experience_atoms import compute_experience_atoms, summarize_breadth_depth
 from git_utils import iter_commits
 from lead_time import compute_lead_times
+from monthly_activity_clusters import compute_clusters
 from poc_branch_history import analyze_branch, default_branch as detect_default_branch, list_branches
 from refix_frequency import compute_refix_events
 
@@ -97,21 +99,27 @@ def _velocity_band(repo: str, branch: str) -> tuple[str, dict]:
     return BAND_OK, evidence
 
 
-def _problem_solving_band(repo: str, activity: dict) -> tuple[str, dict]:
-    """대항목 4: 선행 검증/PoC(4.1) + 활동 폭/다양성(신규, 6.3절)."""
+def _problem_solving_band(repo: str, branch: str, author: str | None, activity: dict) -> tuple[str, dict]:
+    """대항목 4: 선행 검증/PoC(4.1) + 활동 폭/다양성 + 경험 원자(EA, 4.4절, Mockus & Herbsleb 2002)."""
     base = detect_default_branch(repo)
     branches = [b for b in list_branches(repo) if b != base and not b.endswith(f"/{base}")]
     poc_rows = [r for r in (analyze_branch(repo, b, base) for b in branches) if r]
     poc_count = sum(1 for r in poc_rows if r["is_poc"])
 
+    ea = compute_experience_atoms(repo, branch, author)
+    ea_summary = summarize_breadth_depth(ea, min_ea=5)
+
     evidence = {
         "poc_branch_count": poc_count,
         "qualifying_repo_count": activity["qualifying_repo_count"],
         "distinct_extension_count": activity["distinct_extension_count"],
+        "ea_breadth_module_count": ea_summary["breadth_module_count"],
+        "ea_depth_max": ea_summary["depth_max_ea"],
+        "ea_deepest_module": ea_summary["deepest_module"],
     }
-    # 1.5절 비대칭 원칙: PoC/다양성이 "낮다"고 관찰 필요로 깎지 않는다 — 활동이 없다는 것이
+    # 1.5절 비대칭 원칙: PoC/다양성/EA가 "낮다"고 관찰 필요로 깎지 않는다 — 활동이 없다는 것이
     # 곧 역량 부족은 아니기 때문(Montandon et al. 2019). 높을 때만 우수로 가점한다.
-    if poc_count >= 1 or activity["qualifying_repo_count"] >= 3:
+    if poc_count >= 1 or activity["qualifying_repo_count"] >= 3 or ea_summary["breadth_module_count"] >= 5:
         return BAND_GOOD, evidence
     return BAND_OK, evidence
 
@@ -142,12 +150,13 @@ def compute_profile(
     branch: str,
 ) -> dict:
     activity = compute_activity_breadth(repos_for_breadth, author, branch)
+    trend = compute_clusters(repo, branch, author)  # Montandon et al. 2019 방법론(시간축 버전)
 
     categories = {
         "1. 코드 품질 및 완성도": _quality_band(repo, branch, author),
         "2. 개발 속도와 흐름": _velocity_band(repo, branch),
         "3. 협업 및 팀 기여도": (BAND_NA, {"reason": "Gerrit/Jira API 미연결 — 이번 실행 범위 밖"}),
-        "4. 문제 정의 및 설계 역량 (+활동 폭/다양성)": _problem_solving_band(repo, activity),
+        "4. 문제 정의 및 설계 역량 (+활동 폭/다양성/EA)": _problem_solving_band(repo, branch, author, activity),
         "5. 지속 가능성 및 웰빙": _wellbeing_band(repo, branch, author),
     }
 
@@ -156,15 +165,29 @@ def compute_profile(
         "categories": categories,
         "filled_count": len(filled),
         "activity_breadth": activity,
+        "trend": trend,
     }
 
 
 def compute_recognition_signal(profile: dict) -> tuple[bool, str]:
     good_count = sum(1 for band, _ in profile["categories"].values() if band == BAND_GOOD)
     watch_in_quality = profile["categories"]["1. 코드 품질 및 완성도"][0] == BAND_WATCH
-    if good_count >= 3 and not watch_in_quality:
-        return True, f"{good_count}개 대항목이 '우수' 구간이며 품질 지표도 양호함"
-    return False, f"'우수' 구간 {good_count}개 (기준 3개 미달 또는 품질 지표 '관찰 필요')"
+    if good_count < 3 or watch_in_quality:
+        return False, f"'우수' 구간 {good_count}개 (기준 3개 미달 또는 품질 지표 '관찰 필요')"
+
+    trend = profile["trend"]
+    if trend["clustered"] and trend["consecutive_low_months_recent"] >= 2:
+        # 스냅샷은 좋아 보여도, 클러스터링 결과 최근 몇 달이 '저활동 클러스터'라면 지속성 조건을
+        # 만족하지 못하는 것 — 단일 시점 값만으로 "지속적" 인정 신호를 내지 않는다.
+        return False, (
+            f"대항목 밴드는 기준을 만족하지만 최근 {trend['consecutive_low_months_recent']}개월이 "
+            "월별 활동 클러스터링상 '저활동 클러스터'라 '지속적' 조건 미달"
+        )
+
+    trend_note = ""
+    if trend["clustered"]:
+        trend_note = f", 최근 {trend['consecutive_high_months_recent']}개월 연속 고활동 클러스터"
+    return True, f"{good_count}개 대항목이 '우수' 구간이며 품질 지표도 양호함{trend_note}"
 
 
 def compute_warning_sign(profile: dict) -> tuple[bool, str]:
@@ -173,9 +196,24 @@ def compute_warning_sign(profile: dict) -> tuple[bool, str]:
     # 안전장치: 데이터가 있는 축이 너무 적으면 판단하지 않는다.
     if profile["filled_count"] < 3:
         return False, "데이터가 채워진 대항목이 3개 미만이라 판단 보류"
-    if watch_count >= 4:
-        return True, f"5대 대항목 중 {watch_count}개가 '관찰 필요' 구간 (경고 신호 — 확정적 결론 아님)"
-    return False, f"'관찰 필요' 구간 {watch_count}개, 데이터 없음 {na_count}개 (경고 신호 기준 4개 미달)"
+    if watch_count < 4:
+        return False, f"'관찰 필요' 구간 {watch_count}개, 데이터 없음 {na_count}개 (경고 신호 기준 4개 미달)"
+
+    trend = profile["trend"]
+    if not trend["clustered"]:
+        return True, (
+            f"5대 대항목 중 {watch_count}개가 '관찰 필요' 구간 — 다만 월별 데이터가 부족해 "
+            f"'지속성(sustained)'은 확인하지 못한 단일 시점 스냅샷임({trend['reason']})"
+        )
+    if trend["consecutive_low_months_recent"] < 2:
+        return False, (
+            f"'관찰 필요' 구간 {watch_count}개이지만, 월별 활동 클러스터링상 최근 저활동 클러스터가"
+            f" {trend['consecutive_low_months_recent']}개월뿐이라 '지속적' 조건(2개월 이상) 미달"
+        )
+    return True, (
+        f"5대 대항목 중 {watch_count}개가 '관찰 필요' 구간 + 월별 클러스터링상 최근 "
+        f"{trend['consecutive_low_months_recent']}개월 연속 저활동 클러스터 (경고 신호 — 확정적 결론 아님)"
+    )
 
 
 def main() -> None:
