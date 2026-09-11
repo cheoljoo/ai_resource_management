@@ -118,3 +118,22 @@ python3 scripts/dev_metrics/complexity.py --path /path/to/yt-dlp/yt_dlp/utils
 * [scripts/dev_metrics/gerrit_metrics.py](scripts/dev_metrics/gerrit_metrics.py) — `gerrit_fetch.py` 결과 JSON을 입력받아 1.1 재작업률(Patchset 수 분포), 상태 분포, 2.1 리드 타임(Gerrit `created`~`updated`), 변경 규모, 프로젝트별 분포를 계산.
 * [scripts/dev_metrics/jira_metrics.py](scripts/dev_metrics/jira_metrics.py) — 기존 `~/code/_worklog` 도구로 수집한 Jira CSV를 입력받아 상태/이슈타입/우선순위 분포와 월별 추이를 계산.
 * `focus_time.py`, `burnout_signals.py`에 `--author` 옵션을 추가해 특정 작성자로 범위를 좁혀 자기 진단 목적으로 사용할 수 있게 함.
+
+## 5차 작업: 전문가 파인더 (Expert Finder) — AGILEDEV-1132, 5개 소스 결합 (2026-09-11)
+
+"개발시 누가 전문가일까요? AI로 전문가만을 찾자"(AGILEDEV-1132, AGILEDEV-1118의 clone) 티켓에 따라
+git+Gerrit+Jira+Confluence+GitHub 5개 데이터 소스를 결합한 전문가 파인더를 새로 작성했다. 상세 설계·거버넌스
+배경은 [developer_evaluation_metrics.md 7장](developer_evaluation_metrics.md#7-전문가-파인더-expert-finder--agiledev-1132-2026-09-11) 참고.
+
+| 스크립트 | 데이터 소스 | 무엇을 계산하는가 | 비고 |
+| :--- | :--- | :--- | :--- |
+| [scripts/dev_metrics/experience_atoms.py](scripts/dev_metrics/experience_atoms.py) | git(로컬) | Mockus & Herbsleb(2002) 경험 원자(EA) — (모듈, 기술, 변경목적)별 집계, breadth/depth 산출 | 단일 저장소·단일 작성자 자기 진단용 |
+| [scripts/dev_metrics/expert_finder.py](scripts/dev_metrics/expert_finder.py) | git(로컬, 여러 저장소) | (저장소, 모듈)별 전체 기여자 EA 랭킹 — "이 모듈은 누구에게 물어볼까" | `--since-days` 옵션화(기본 14일), 여러 `--repo` 동시 지정 가능 |
+| [scripts/dev_metrics/gerrit_signal.py](scripts/dev_metrics/gerrit_signal.py) | Gerrit REST | (서버, 프로젝트)별 owner 활동 카운트 | `gerrit_fetch.py`의 "본인 owner 한정" 안전장치를 라우팅 목적으로 완화(거버넌스 확장, 사용자 승인) |
+| [scripts/dev_metrics/github_signal.py](scripts/dev_metrics/github_signal.py) | GitHub(`gh` CLI) | 저장소별 커밋/PR/이슈 작성자 카운트 | 이 세션에 GitHub 전용 MCP는 없어 로컬 인증된 `gh` CLI로 대체 |
+| Jira/Confluence 신호 | `mcp-atlassian` MCP (`jira_search`/`confluence_search`) | 사람별 최근 티켓 총건수(Jira `total`), 문서 활동 건수(Confluence, 상한 50) | 별도 스크립트 없음 — MCP는 담당 agent만 호출 가능하므로 조회 결과를 `jira_confluence_signal_2026-09-11.json`으로 저장 |
+| [scripts/dev_metrics/combine_expert_signals.py](scripts/dev_metrics/combine_expert_signals.py) | 위 4개 산출물 결합 | 저장소/모듈별 1차 랭킹(git) + 사람별 5개 소스 종합 프로파일 표 | 개인별 성과 비교·평가로 전용 금지(라우팅 참고용) |
+
+**검증 규모**: `AutoTest_Cmd`/`LogAnalyzer`/`pvs_crawler`/`pvs_crawler_new`/
+`new_commit_review_violation_checker`/`pvs_trender`/`ldap`/`swit`/`sage-wiki` 9개 저장소를 합쳐
+고유 기여자 410명(전체 이력 기준) 규모로 실행 확인 — 목표였던 "~20명"을 크게 상회.

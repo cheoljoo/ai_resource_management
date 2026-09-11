@@ -1,0 +1,27 @@
+{
+  "collected_at": "2026-09-11",
+  "window_days": 180,
+  "note": "Jira는 jira_search 결과의 'total' 필드(정확한 카운트). Confluence는 confluence_search limit=50 응답의 실제 반환 건수(50이면 상한 도달, 실제로는 더 많을 수 있음). 둘 다 mcp-atlassian MCP로 직접 조회, 별도 API 토큰 불필요.",
+  "people": {
+    "keyman.kim@lge.com": {"jira_total_180d": 42, "confluence_hits": 50},
+    "yaga.lee@lge.com": {"jira_total_180d": 367, "confluence_hits": 50},
+    "seungdae.goh@lge.com": {"jira_total_180d": 5, "confluence_hits": 50},
+    "cheoljoo.lee@lge.com": {"jira_total_180d": 159, "confluence_hits": 50},
+    "gina.oh@lge.com": {"jira_total_180d": 41, "confluence_hits": 50},
+    "sangjae0.lee@lge.com": {"jira_total_180d": 15, "confluence_hits": 50},
+    "hakchoong.kim@lge.com": {"jira_total_180d": 28, "confluence_hits": 50},
+    "tuan3.pham@lge.com": {"jira_total_180d": 137, "confluence_hits": 50},
+    "jungmee.lee@lge.com": {"jira_total_180d": 11, "confluence_hits": 50},
+    "vy4.nguyen@lge.com": {"jira_total_180d": 119, "confluence_hits": 50},
+    "youngkyu.kang@lge.com": {"jira_total_180d": 214, "confluence_hits": 50},
+    "kim.phan@lge.com": {"jira_total_180d": 47, "confluence_hits": 50},
+    "jongseok.won@lge.com": {"jira_total_180d": 317, "confluence_hits": 50},
+    "dongdu.shin@lge.com": {"jira_total_180d": 126, "confluence_hits": 50},
+    "youngjae.cho@lge.com": {"jira_total_180d": 8, "confluence_hits": 50},
+    "thai2.pham@lge.com": {"jira_total_180d": 61, "confluence_hits": 50},
+    "hohyeong96.seong@lge.com": {"jira_total_180d": 0, "confluence_hits": 0, "note": "실제 계정은 @lgepartner.com으로 추정(Gerrit에서 hohyeong96.seong@lgepartner.com 확인됨) — lge.com 별칭 불일치"},
+    "thai2.nguyen@lge.com": {"jira_total_180d": 9, "confluence_hits": 50},
+    "darrel.kang@lge.com": {"jira_total_180d": 1, "confluence_hits": 50},
+    "jk.soh@lge.com": {"jira_total_180d": 5, "confluence_hits": 50}
+  }
+}

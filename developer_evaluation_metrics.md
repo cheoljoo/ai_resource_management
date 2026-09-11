@@ -550,3 +550,80 @@ API Key 발급 절차가 "사람이 웹 UI에서 1회성으로 발급"해야 하
   (Gerrit+Jira+Confluence)을 각각 인증하던 기존 방식보다 **키 하나로 단순화**된다는 이점은 여전히 유효.
 * 다음 단계: **사용자가 SMILE 웹 UI에서 API Key를 발급**해주면, 그 키로 이 저장소의 실제 분석 요청 1건을
   시험 삼아 실행해 응답 스키마(무엇이 반환되는지, 목록 조회가 실제로 가능한지)를 확인한다.
+
+---
+
+## 7. 전문가 파인더 (Expert Finder) — AGILEDEV-1132 (2026-09-11)
+
+**티켓 원문 핵심**: "개발시 누가 전문가일까요? AI로 전문가만을 찾자. 정성적인 평가는 배제한다. DATA
+기준으로만 찾는다. 필요한 데이터들을 최대한 모아서." — [AGILEDEV-1118](http://jira.lge.com/issue/browse/AGILEDEV-1118)을
+clone한 좁은 범위의 티켓이며, 이 절은 AGILEDEV-1118의 다른 부분(Recognition/Warning Signal 등)과는
+독립적이다.
+
+### 7.1 핵심 전제 재확인 (완료조건 1번)
+
+`experience_atoms.py`/`expert_finder.py`/`gerrit_signal.py`/`github_signal.py`/
+`combine_expert_signals.py` 어디에도 설문·자기기술·Peer Feedback 등 정성적 입력은 없다. 모두 git
+커밋 메타데이터, Gerrit change 메타데이터, Jira 이슈 메타데이터(mcp-atlassian), Confluence 문서
+메타데이터(mcp-atlassian), GitHub 커밋 메타데이터(`gh` CLI)만 사용한다 — **확인 완료**.
+
+### 7.2 데이터 소스 5종 결합
+
+원래 spec.md 후보 A(git 확장)/B(Gerrit+Jira 결합)/C(독립 문서화)를 사용자가 모두 채택하도록 정렬했고,
+범위가 더 넓어져 **5개 소스**를 결합했다:
+
+| 소스 | 접근 경로 | 스크립트 |
+| :--- | :--- | :--- |
+| git(사내+GitHub) | 로컬 clone 직접 분석 | `experience_atoms.py`, `expert_finder.py` |
+| Gerrit | `~/code/ccr/global_variables.py` 자격증명 재사용, owner 제한 완화(§7.3) | `gerrit_signal.py` |
+| Jira | 이 세션에 연결된 `mcp-atlassian` MCP (`jira_search`) | (MCP 직접 호출, 별도 스크립트 없음) |
+| Confluence | 이 세션에 연결된 `mcp-atlassian` MCP (`confluence_search`) | (MCP 직접 호출, 별도 스크립트 없음) |
+| GitHub | 로컬에 이미 인증된 `gh` CLI | `github_signal.py` |
+| 5종 결합 | 위 4개 산출물을 인원 단위로 합산 | `combine_expert_signals.py` |
+
+Jira/Confluence는 스크립트가 API 토큰을 직접 다루지 않는다 — MCP 도구는 담당 agent(Claude)만 호출할
+수 있으므로, 조회 결과를 JSON으로 저장(`jira_confluence_signal_2026-09-11.json`)한 뒤
+`combine_expert_signals.py`가 그 JSON을 읽어 결합한다.
+
+### 7.3 거버넌스 확장 (반드시 유지)
+
+`gerrit_signal.py`는 기존 `gerrit_fetch.py`의 "owner를 자기 자신으로 제한"하는 안전장치를 **라우팅
+목적에 한해서만** 완화한다(2026-09-11 사용자 승인). 원본 코드/리뷰 코멘트 본문은 가져오지 않고
+project/owner/시간 등 메타데이터만 집계한다. Jira/Confluence도 동일한 정신으로 메타데이터(제목,
+상태, 담당자, 문서 제목/공간)만 다루며 본문 전체를 저장하지 않는다. **이 예외는 라우팅 목적
+한정이며, 개인별 성과 비교·평가로 전용하는 것은 여전히 금지**(1.3절 Goodhart's Law와 동일 원칙).
+
+### 7.4 다중 저장소 검증 결과 (완료조건 3·4번)
+
+`AutoTest_Cmd`, `LogAnalyzer`, `pvs_crawler`, `pvs_crawler_new`,
+`new_commit_review_violation_checker`, `pvs_trender`, `ldap`, `swit`, `sage-wiki` 9개 저장소를
+합쳐 실행한 결과:
+
+* git 기준 고유 기여자 43명(180일) ~ 410명(전체 이력, Gerrit/GitHub 포함 합산) — 목표였던 "~20명
+  규모"를 크게 상회.
+* 저장소별 모듈 전문가 랭킹 예시: `pvs_crawler/SWPMUtil` → keyman.kim(2583 EA) > yaga.lee(1922) >
+  hakchoong.kim(306); `LogAnalyzer/proc_dlt_log/ALOGA` → cheoljoo.lee(931 EA) 압도적 1위 등.
+* Gerrit(na/lamp 서버, 180일)은 이번 로스터와 프로젝트 중복이 크지 않아 대부분 0으로 나왔다 — **정직한
+  한계**로 기록한다. Jira는 로스터 20명 전원(1명 도메인 불일치 제외)에서 실데이터 확보. GitHub는
+  `sage-wiki` 개인 미러 1개뿐이라 회사 내 실질적인 다인 협업 신호는 확인되지 않음(LGE는 GitHub 대신
+  사내 git+Gerrit을 주로 사용).
+
+### 7.5 `--since-days` 기본값 근거 (완료조건 2번)
+
+`expert_finder.py`는 이미 `--since-days` 옵션을 제공하며 기본값 14일이다. 근거: "이 모듈은 최근 누구에게
+물어볼까"라는 라우팅 목적에는 최근 활동이 가장 신뢰도 높은 신호이기 때문(원 논문의 최신성 가중 원칙과
+일치). 다중 저장소 폭넓은 검증처럼 "회사 안의 어떤 사람들이 전문가인지" 전체 그림이 필요할 때는
+`--since-days`를 크게(예: 1500) 늘려서 사용한다 — 옵션화되어 있으므로 무제한 전체 이력 확장도 가능하지만
+기본값은 여전히 "최근 라우팅" 목적에 최적화되어 있다.
+
+### 7.6 알려진 한계
+
+1. Gerrit 신호는 조회한 두 서버(na/lamp)가 이번 git 로스터와 프로젝트 중복이 낮아 대부분 0 — 서버·프로젝트
+   매핑을 더 정교화할 여지가 있음(예: 로스터 인원의 실제 소속 프로젝트를 먼저 파악 후 해당 Gerrit
+   서버만 조회).
+2. Confluence 신호는 `confluence_search`의 페이지당 상한(50)만 확인했을 뿐 정확한 총 건수는 아님 —
+   "활동 있음(50 도달)/불명확" 수준의 근사치.
+3. GitHub는 이 환경에서 회사 차원의 실질적 다인 협업 저장소를 찾지 못함 — LGE 개발은 사내
+   git(mod.lge.com)+Gerrit 중심이며 GitHub는 개인 미러 용도로만 확인됨.
+4. `hohyeong96.seong@lge.com`처럼 도메인 별칭 불일치(`@lgepartner.com` 파트너 계정)가 있는 경우 시스템
+   간 동일인 매칭이 깨짐 — 향후 이메일 정규화/별칭 매핑표가 필요.
