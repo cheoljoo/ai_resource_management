@@ -137,3 +137,11 @@ git+Gerrit+Jira+Confluence+GitHub 5개 데이터 소스를 결합한 전문가 �
 **검증 규모**: `AutoTest_Cmd`/`LogAnalyzer`/`pvs_crawler`/`pvs_crawler_new`/
 `new_commit_review_violation_checker`/`pvs_trender`/`ldap`/`swit`/`sage-wiki` 9개 저장소를 합쳐
 고유 기여자 410명(전체 이력 기준) 규모로 실행 확인 — 목표였던 "~20명"을 크게 상회.
+
+**2026-09-11 후속 반영** (사용자 피드백): (1) `@lge.com`/`@lgepartner.com` 등 도메인이 달라도 `@` 앞부분만
+같으면 동일인으로 합산하도록 `combine_expert_signals.py`에 `normalize_person()` 추가. (2) 회사의 실제
+GitHub/GitLab은 github.com이 아니라 `mod.lge.com/hub`(자체 호스팅 GitLab)임을 반영해
+[scripts/dev_metrics/gitlab_signal.py](scripts/dev_metrics/gitlab_signal.py) 신규 작성(`~/code/mouse`의
+기존 연동 코드와 동일한 `.env`의 `LGEP_ID`/`LGEP_PASSWORD` 계정 사용) — `AutoTest_Cmd`에서 실제 Merge
+Request 활동을 확인해 github.com에서는 못 봤던 신호를 얻음. (3) 모든 소스를 180일로 통일 → 고유 인원
+391명(180일 이내 활동 기준) 확인.

@@ -622,8 +622,27 @@ project/owner/시간 등 메타데이터만 집계한다. Jira/Confluence도 동
    매핑을 더 정교화할 여지가 있음(예: 로스터 인원의 실제 소속 프로젝트를 먼저 파악 후 해당 Gerrit
    서버만 조회).
 2. Confluence 신호는 `confluence_search`의 페이지당 상한(50)만 확인했을 뿐 정확한 총 건수는 아님 —
-   "활동 있음(50 도달)/불명확" 수준의 근사치.
-3. GitHub는 이 환경에서 회사 차원의 실질적 다인 협업 저장소를 찾지 못함 — LGE 개발은 사내
-   git(mod.lge.com)+Gerrit 중심이며 GitHub는 개인 미러 용도로만 확인됨.
-4. `hohyeong96.seong@lge.com`처럼 도메인 별칭 불일치(`@lgepartner.com` 파트너 계정)가 있는 경우 시스템
-   간 동일인 매칭이 깨짐 — 향후 이메일 정규화/별칭 매핑표가 필요.
+   "활동 있음(50 도달)/불명확" 수준의 근사치. (2026-09-11 업데이트: CQL에 `lastmodified >= now("-180d")`를
+   명시해 최소한 "180일 이내"라는 조건 자체는 정확하게 지켜지도록 수정함.)
+3. `swpmviz` GitLab 그룹(`pvs_crawler` 등)은 SSH clone 권한은 있으나 이 계정의 GitLab API 조회 권한이
+   없어(`404 Project Not Found`) `gitlab_signal.py`로 커밋/MR을 가져오지 못함 — SSH 키 기반 git 권한과
+   GitLab 웹/API 멤버십이 분리되어 있는 것으로 보임. `swit` 프로젝트도 동일한 이유로 403/404 발생.
+
+### 7.7 2026-09-11 후속 반영 — 식별자 정규화, 사내 GitHub/GitLab 반영, 180일 통일
+
+사용자 피드백에 따라 세 가지를 반영했다:
+
+1. **식별자 정규화**: `@lge.com`/`@lgepartner.com` 등 도메인이 달라도 `@` 앞부분(local-part)이 같으면
+   동일인으로 간주한다. `combine_expert_signals.py`의 `normalize_person()`이 모든 소스(git/Gerrit/
+   GitLab/Jira/Confluence)를 이 기준으로 합산한다 — 이전에 `hohyeong96.seong@lge.com`과
+   `hohyeong96.seong@lgepartner.com`이 별도 인원으로 잡히던 문제를 해결.
+2. **사내 GitHub/GitLab 반영**: 회사의 실제 GitHub/GitLab은 github.com이 아니라 **`mod.lge.com/hub`**
+   (자체 호스팅 GitLab, API v4)이다. 접속 코드는 `~/code/mouse`(`mod-project.py`, `mod-fork.py` 등)에
+   이미 존재하며, 같은 방식(`.env`의 `LGEP_ID`/`LGEP_PASSWORD`, 사내 LGE 포털 계정)으로 인증한다.
+   `github_signal.py`(github.com, `gh` CLI)는 개인 미러 확인용으로 남겨두고, **`gitlab_signal.py`**를
+   새로 작성해 `mod.lge.com/hub`의 커밋/MR/이슈를 180일 기준으로 수집한다. 실제로 `AutoTest_Cmd`에서
+   Merge Request 활동이 확인되어(kim.phan 3건, tuan3.pham 3건), github.com에서는 전혀 보이지 않던
+   "진짜 회사 협업 신호"를 얻었다.
+3. **180일 통일**: git EA, Gerrit changes, GitLab 커밋/MR, Jira 티켓 총건수, Confluence 문서 활동을
+   모두 `--since-days 180` 하나로 통일했다. 결과: 9개 저장소 + Gerrit(na/lamp) + GitLab(AutoTest_Cmd,
+   sage-wiki 등) 기준 고유 인원 **391명**(180일 이내 활동 기준) 확인 — 여전히 목표 ~20명을 크게 상회.
