@@ -6,6 +6,19 @@
 
 ## 실행 방법
 
+**2026-09-15 추가:** 전문가 파인더의 Jira·Confluence 자동 수집은
+[jira_confluence_signal.py](scripts/dev_metrics/jira_confluence_signal.py)가 담당한다.
+이 수집기는 예외적으로 `requests`/`python-dotenv`를 사용하며 `uv run`이 의존성을 준비한다.
+환경설정·집계 의미·Makefile 사용법은 [수집기 안내](scripts/dev_metrics/jira_confluence_signal.md) 참고.
+
+Gerrit은 [gerrit_signal.py](scripts/dev_metrics/gerrit_signal.py)가 owner 외에 리뷰 투표,
+메시지·공개 댓글 메타데이터, MERGED 상태와 실제 submitter를 수집한다.
+조회 상한과 집계 의미는 [Gerrit 수집기 안내](scripts/dev_metrics/gerrit_signal.md) 참고.
+
+GitLab MR과 GitHub PR의 리뷰·댓글·병합·실제 병합자 메타데이터는
+[MR/PR 수집기 안내](scripts/dev_metrics/mr_pr_signal.md) 참고. Make 실행과 테스트는
+모두 `uv`를 사용하며 결합 리포트에는 공급자별 MR/PR 표로 표시한다.
+
 ```bash
 cd scripts/dev_metrics
 python3 <script>.py --repo /path/to/target/repo [옵션들]
