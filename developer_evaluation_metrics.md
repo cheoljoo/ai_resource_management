@@ -792,3 +792,98 @@ API Key 발급 절차가 "사람이 웹 UI에서 1회성으로 발급"해야 하
 2. **인사 평가 직접 연동 금지 (Support, Not Surveillance)**
    * 본 메타데이터 지표는 개발자를 감시하거나 줄세우기 위한 목적이 아니라, **"업무 병목 해소, Focus Time 확보, 리소스 재배정"**을 지원하는 엔지니어링 헬스체크 도구로 활용되어야 합니다.
 
+---
+
+## 8. 전문가 파인더 (Expert Finder) — AGILEDEV-1132 (2026-09-11)
+
+**티켓 원문 핵심**: "개발시 누가 전문가일까요? AI로 전문가만을 찾자. 정성적인 평가는 배제한다. DATA
+기준으로만 찾는다. 필요한 데이터들을 최대한 모아서." — [AGILEDEV-1118](http://jira.lge.com/issue/browse/AGILEDEV-1118)을
+clone한 좁은 범위의 티켓이며, 이 절은 AGILEDEV-1118의 다른 부분(Recognition/Warning Signal 등)과는
+독립적이다.
+
+### 8.1 핵심 전제 재확인 (완료조건 1번)
+
+`experience_atoms.py`/`expert_finder.py`/`gerrit_signal.py`/`github_signal.py`/
+`combine_expert_signals.py` 어디에도 설문·자기기술·Peer Feedback 등 정성적 입력은 없다. 모두 git
+커밋 메타데이터, Gerrit change 메타데이터, Jira 이슈 메타데이터(mcp-atlassian), Confluence 문서
+메타데이터(mcp-atlassian), GitHub 커밋 메타데이터(`gh` CLI)만 사용한다 — **확인 완료**.
+
+### 8.2 데이터 소스 5종 결합
+
+원래 spec.md 후보 A(git 확장)/B(Gerrit+Jira 결합)/C(독립 문서화)를 사용자가 모두 채택하도록 정렬했고,
+범위가 더 넓어져 **5개 소스**를 결합했다:
+
+| 소스 | 접근 경로 | 스크립트 |
+| :--- | :--- | :--- |
+| git(사내+GitHub) | 로컬 clone 직접 분석 | `experience_atoms.py`, `expert_finder.py` |
+| Gerrit | `~/code/ccr/global_variables.py` 자격증명 재사용, owner 제한 완화(§7.3) | `gerrit_signal.py` |
+| Jira | 이 세션에 연결된 `mcp-atlassian` MCP (`jira_search`) | (MCP 직접 호출, 별도 스크립트 없음) |
+| Confluence | 이 세션에 연결된 `mcp-atlassian` MCP (`confluence_search`) | (MCP 직접 호출, 별도 스크립트 없음) |
+| GitHub | 로컬에 이미 인증된 `gh` CLI | `github_signal.py` |
+| 5종 결합 | 위 4개 산출물을 인원 단위로 합산 | `combine_expert_signals.py` |
+
+Jira/Confluence는 스크립트가 API 토큰을 직접 다루지 않는다 — MCP 도구는 담당 agent(Claude)만 호출할
+수 있으므로, 조회 결과를 JSON으로 저장(`jira_confluence_signal_2026-09-11.json`)한 뒤
+`combine_expert_signals.py`가 그 JSON을 읽어 결합한다.
+
+### 8.3 거버넌스 확장 (반드시 유지)
+
+`gerrit_signal.py`는 기존 `gerrit_fetch.py`의 "owner를 자기 자신으로 제한"하는 안전장치를 **라우팅
+목적에 한해서만** 완화한다(2026-09-11 사용자 승인). 원본 코드/리뷰 코멘트 본문은 가져오지 않고
+project/owner/시간 등 메타데이터만 집계한다. Jira/Confluence도 동일한 정신으로 메타데이터(제목,
+상태, 담당자, 문서 제목/공간)만 다루며 본문 전체를 저장하지 않는다. **이 예외는 라우팅 목적
+한정이며, 개인별 성과 비교·평가로 전용하는 것은 여전히 금지**(1.3절 Goodhart's Law와 동일 원칙).
+
+### 8.4 다중 저장소 검증 결과 (완료조건 3·4번)
+
+`AutoTest_Cmd`, `LogAnalyzer`, `pvs_crawler`, `pvs_crawler_new`,
+`new_commit_review_violation_checker`, `pvs_trender`, `ldap`, `swit`, `sage-wiki` 9개 저장소를
+합쳐 실행한 결과:
+
+* git 기준 고유 기여자 43명(180일) ~ 410명(전체 이력, Gerrit/GitHub 포함 합산) — 목표였던 "~20명
+  규모"를 크게 상회.
+* 저장소별 모듈 전문가 랭킹 예시: `pvs_crawler/SWPMUtil` → keyman.kim(2583 EA) > yaga.lee(1922) >
+  hakchoong.kim(306); `LogAnalyzer/proc_dlt_log/ALOGA` → cheoljoo.lee(931 EA) 압도적 1위 등.
+* Gerrit(na/lamp 서버, 180일)은 이번 로스터와 프로젝트 중복이 크지 않아 대부분 0으로 나왔다 — **정직한
+  한계**로 기록한다. Jira는 로스터 20명 전원(1명 도메인 불일치 제외)에서 실데이터 확보. GitHub는
+  `sage-wiki` 개인 미러 1개뿐이라 회사 내 실질적인 다인 협업 신호는 확인되지 않음(LGE는 GitHub 대신
+  사내 git+Gerrit을 주로 사용).
+
+### 8.5 `--since-days` 기본값 근거 (완료조건 2번)
+
+`expert_finder.py`는 이미 `--since-days` 옵션을 제공하며 기본값 14일이다. 근거: "이 모듈은 최근 누구에게
+물어볼까"라는 라우팅 목적에는 최근 활동이 가장 신뢰도 높은 신호이기 때문(원 논문의 최신성 가중 원칙과
+일치). 다중 저장소 폭넓은 검증처럼 "회사 안의 어떤 사람들이 전문가인지" 전체 그림이 필요할 때는
+`--since-days`를 크게(예: 1500) 늘려서 사용한다 — 옵션화되어 있으므로 무제한 전체 이력 확장도 가능하지만
+기본값은 여전히 "최근 라우팅" 목적에 최적화되어 있다.
+
+### 8.6 알려진 한계
+
+1. Gerrit 신호는 조회한 두 서버(na/lamp)가 이번 git 로스터와 프로젝트 중복이 낮아 대부분 0 — 서버·프로젝트
+   매핑을 더 정교화할 여지가 있음(예: 로스터 인원의 실제 소속 프로젝트를 먼저 파악 후 해당 Gerrit
+   서버만 조회).
+2. Confluence 신호는 `confluence_search`의 페이지당 상한(50)만 확인했을 뿐 정확한 총 건수는 아님 —
+   "활동 있음(50 도달)/불명확" 수준의 근사치. (2026-09-11 업데이트: CQL에 `lastmodified >= now("-180d")`를
+   명시해 최소한 "180일 이내"라는 조건 자체는 정확하게 지켜지도록 수정함.)
+3. `swpmviz` GitLab 그룹(`pvs_crawler` 등)은 SSH clone 권한은 있으나 이 계정의 GitLab API 조회 권한이
+   없어(`404 Project Not Found`) `gitlab_signal.py`로 커밋/MR을 가져오지 못함 — SSH 키 기반 git 권한과
+   GitLab 웹/API 멤버십이 분리되어 있는 것으로 보임. `swit` 프로젝트도 동일한 이유로 403/404 발생.
+
+### 8.7 2026-09-11 후속 반영 — 식별자 정규화, 사내 GitHub/GitLab 반영, 180일 통일
+
+사용자 피드백에 따라 세 가지를 반영했다:
+
+1. **식별자 정규화**: `@lge.com`/`@lgepartner.com` 등 도메인이 달라도 `@` 앞부분(local-part)이 같으면
+   동일인으로 간주한다. `combine_expert_signals.py`의 `normalize_person()`이 모든 소스(git/Gerrit/
+   GitLab/Jira/Confluence)를 이 기준으로 합산한다 — 이전에 `hohyeong96.seong@lge.com`과
+   `hohyeong96.seong@lgepartner.com`이 별도 인원으로 잡히던 문제를 해결.
+2. **사내 GitHub/GitLab 반영**: 회사의 실제 GitHub/GitLab은 github.com이 아니라 **`mod.lge.com/hub`**
+   (자체 호스팅 GitLab, API v4)이다. 접속 코드는 `~/code/mouse`(`mod-project.py`, `mod-fork.py` 등)에
+   이미 존재하며, 같은 방식(`.env`의 `LGEP_ID`/`LGEP_PASSWORD`, 사내 LGE 포털 계정)으로 인증한다.
+   `github_signal.py`(github.com, `gh` CLI)는 개인 미러 확인용으로 남겨두고, **`gitlab_signal.py`**를
+   새로 작성해 `mod.lge.com/hub`의 커밋/MR/이슈를 180일 기준으로 수집한다. 실제로 `AutoTest_Cmd`에서
+   Merge Request 활동이 확인되어(kim.phan 3건, tuan3.pham 3건), github.com에서는 전혀 보이지 않던
+   "진짜 회사 협업 신호"를 얻었다.
+3. **180일 통일**: git EA, Gerrit changes, GitLab 커밋/MR, Jira 티켓 총건수, Confluence 문서 활동을
+   모두 `--since-days 180` 하나로 통일했다. 결과: 9개 저장소 + Gerrit(na/lamp) + GitLab(AutoTest_Cmd,
+   sage-wiki 등) 기준 고유 인원 **391명**(180일 이내 활동 기준) 확인 — 여전히 목표 ~20명을 크게 상회.

@@ -79,8 +79,46 @@
 - **타인 데이터를 다루는 작업이므로 개인정보/거버넌스 민감도가 높다** — "공유 저장소에 이미 공개된
   git log를 라우팅 목적으로만 쓴다"는 기존 예외 조항의 정신을 반드시 유지해야 한다(성과 비교·평가로
   전용 금지).
-- **베이스 브랜치를 `main`이 아니라 `intent/2026-09-09-developer-expertise-grading`으로 잡았다** — 이
-  intent가 그 브랜치(커밋 `231c41f`)에서 분기됐다. 이유: `expert_finder.py`/`experience_atoms.py` 등
-  핵심 구현이 전부 그 브랜치에만 있고 `main`에는 없다(`main`은 대신 SMILE 관련 내용만 가진 별도 커밋
-  `cdb9884`로 갈라져 있음). **이 판단은 herdr-intent 실행 중 사용자 확인 없이 내린 것**이므로, 이
-  intent 착수 전에 사용자에게 재확인받는 것을 권장한다(plan.md 착수 전 체크리스트 참고).
+
+## 2026-09-11 세션에서 사용자와 정렬 완료된 결정 사항
+
+이 문서 최초 작성 시점에는 "풀어야 할 것" 4가지가 미정이었으나, 담당 agent가 착수 전 `AskUserQuestion`으로
+확인한 결과 다음과 같이 확정됐다:
+
+1. **베이스 브랜치 → `main`으로 재확정**. 원래 `intent/2026-09-09-developer-expertise-grading`(커밋
+   `231c41f`) 기반으로 worktree가 만들어져 있었으나(herdr-intent가 사용자 확인 없이 내린 판단), 사용자가
+   "main 기준으로 새로 시작"을 명시적으로 선택했다. 이에 따라 담당 agent가 기존 worktree를 제거하고
+   `main`(커밋 `a66db81`) 기준으로 새 worktree/브랜치(`intent/2026-09-11-expert-finder`)를 재생성했다.
+   **`expert_finder.py`/`experience_atoms.py`/`monthly_activity_clusters.py`는 main에 없으므로(1118
+   브랜치에만 존재) 가져오지 않고 완전히 새로 작성한다** — 사용자가 "main에서 완전히 새로 작성"을
+   명시적으로 선택함. 단, `gerrit_metrics.py`/`jira_metrics.py`/`git_utils.py` 등 다른 dev_metrics
+   스크립트는 main에 이미 존재한다.
+2. **접근 방식 → A+B+C 전부, 그리고 원래 spec.md B안보다 더 넓은 범위로 확장**. 사용자가 A(git 확장)·
+   B(Gerrit+Jira 결합)·C(독립 문서/스크립트) 세 후보 모두를 선택했고, 이어서 "jira, gerrit, collab(=
+   Confluence), 사내 git, github 등을 POC 기준(2주, ~20명)으로 모두 찾는가"라고 되물어, 담당 agent가
+   재확인한 결과 **5개 데이터 소스(사내 git + GitHub + Gerrit + Jira + Confluence)를 모두 결합**하는
+   것으로 확정됐다.
+   - **접근 경로**: git은 로컬 clone 직접 분석(기존 방식 확장), **Jira/Confluence는 이 세션에 연결된
+     `mcp-atlassian` MCP 도구**(`jira_search`, `confluence_search` 등)를 그대로 사용(별도 API 토큰
+     발급 불필요), **GitHub는 이미 인증된 로컬 `gh` CLI**(계정 `cheoljoo`, scope: gist/read:org/repo/
+     workflow)를 사용, **Gerrit은 기존 `gerrit_fetch.py`가 쓰던 `~/code/ccr/gerrit/global_variables.py`
+     자격증명을 그대로 재사용**하되 owner 필터를 자기 자신에서 풀어야 한다(아래 4번 참고).
+   - `.env`에는 GitHub/Confluence용 토큰이 없었으나, 위 대체 경로(MCP·`gh` CLI)로 커버되므로 신규 토큰
+     발급은 불필요한 것으로 확인됨. `GITLAB_TOKEN`은 "사내 git" 커버용으로 이미 존재.
+3. **검증 규모 → 여러 저장소를 합쳐 총 ~20명 규모**. 특정 조직/팀 단위가 아니라, `~/code` 하위 여러
+   저장소(예: 기존 `pvs_crawler` 4명 + `sage-wiki` 3명 등, 실제 조합은 구현 단계에서 재확정)를 합산해
+   총 인원 수 기준으로 20명 규모를 맞춘다.
+4. **AGILEDEV-1118과의 관계 → (b) "나머지 부분은 신경 쓰지 않아도 됨"으로 확정**. Recognition/Warning
+   Signal 등 1118의 다른 부분은 이번 작업에서 손대지 않고, 1132는 "전문가 찾기"만 독립적으로 완성한다.
+
+## ⚠️ 이번 확장이 건드리는 기존 안전장치 — 명시적 사용자 승인 필요했던 지점
+
+`gerrit_fetch.py` 상단 주석에 **"기본적으로 특정 owner(자기 자신)로 쿼리를 제한해, 동료 데이터가 섞여
+들어오지 않도록 한다"**는 의도적 설계 원칙이 이미 명시돼 있었다. 이번 20명 규모 확장은 이 안전장치를
+푸는 것이므로, 담당 agent가 별도로 사용자에게 승인을 요청했고 **"라우팅 목적 한정" 전제 하에 승인**받았다
+(성과평가·개인 비교 전용 금지 원칙은 그대로 유지). Jira 쪽도 동일한 정신(본인 범위 한정 원칙의 예외)이
+적용된다.
+
+- **베이스 브랜치 이력**: 최초 herdr-intent가 사용자 확인 없이 `intent/2026-09-09-developer-expertise-grading`
+  기반으로 worktree를 만들었던 판단은 위 1번에서 `main` 기준으로 정정됐다(재확인 완료, 더 이상 열린
+  질문 아님).

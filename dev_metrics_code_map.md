@@ -6,6 +6,19 @@
 
 ## 실행 방법
 
+**2026-09-15 추가:** 전문가 파인더의 Jira·Confluence 자동 수집은
+[jira_confluence_signal.py](scripts/dev_metrics/jira_confluence_signal.py)가 담당한다.
+이 수집기는 예외적으로 `requests`/`python-dotenv`를 사용하며 `uv run`이 의존성을 준비한다.
+환경설정·집계 의미·Makefile 사용법은 [수집기 안내](scripts/dev_metrics/jira_confluence_signal.md) 참고.
+
+Gerrit은 [gerrit_signal.py](scripts/dev_metrics/gerrit_signal.py)가 owner 외에 리뷰 투표,
+메시지·공개 댓글 메타데이터, MERGED 상태와 실제 submitter를 수집한다.
+조회 상한과 집계 의미는 [Gerrit 수집기 안내](scripts/dev_metrics/gerrit_signal.md) 참고.
+
+GitLab MR과 GitHub PR의 리뷰·댓글·병합·실제 병합자 메타데이터는
+[MR/PR 수집기 안내](scripts/dev_metrics/mr_pr_signal.md) 참고. Make 실행과 테스트는
+모두 `uv`를 사용하며 결합 리포트에는 공급자별 MR/PR 표로 표시한다.
+
 ```bash
 cd scripts/dev_metrics
 python3 <script>.py --repo /path/to/target/repo [옵션들]
@@ -185,3 +198,30 @@ PwC GenAI Flywheel 진단(plan.md 참고)에서 식별한 "가장 유력한 다�
 * **4단계(파운데이션 모델/아키텍처)는 코드 변경 없이 결정 문서화만 진행** —
   `developer_evaluation_metrics.md` 1.8절 참고. 현재 아키텍처(Claude Code + 결정론적 Python
   스크립트, LLM 추론 없음)를 PoC 단계 공식 아키텍처로 채택, 정식 스케줄/다인원 확장 시 재검토.
+
+## 9차 작업: 전문가 파인더 (Expert Finder) — AGILEDEV-1132, 5개 소스 결합 (2026-09-11)
+
+"개발시 누가 전문가일까요? AI로 전문가만을 찾자"(AGILEDEV-1132, AGILEDEV-1118의 clone) 티켓에 따라
+git+Gerrit+Jira+Confluence+GitHub 5개 데이터 소스를 결합한 전문가 파인더를 새로 작성했다. 상세 설계·거버넌스
+배경은 [developer_evaluation_metrics.md 8장](developer_evaluation_metrics.md#8-전문가-파인더-expert-finder--agiledev-1132-2026-09-11) 참고.
+
+| 스크립트 | 데이터 소스 | 무엇을 계산하는가 | 비고 |
+| :--- | :--- | :--- | :--- |
+| [scripts/dev_metrics/experience_atoms.py](scripts/dev_metrics/experience_atoms.py) | git(로컬) | Mockus & Herbsleb(2002) 경험 원자(EA) — (모듈, 기술, 변경목적)별 집계, breadth/depth 산출 | 단일 저장소·단일 작성자 자기 진단용 |
+| [scripts/dev_metrics/expert_finder.py](scripts/dev_metrics/expert_finder.py) | git(로컬, 여러 저장소) | (저장소, 모듈)별 전체 기여자 EA 랭킹 — "이 모듈은 누구에게 물어볼까" | `--since-days` 옵션화(기본 14일), 여러 `--repo` 동시 지정 가능 |
+| [scripts/dev_metrics/gerrit_signal.py](scripts/dev_metrics/gerrit_signal.py) | Gerrit REST | (서버, 프로젝트)별 owner 활동 카운트 | `gerrit_fetch.py`의 "본인 owner 한정" 안전장치를 라우팅 목적으로 완화(거버넌스 확장, 사용자 승인) |
+| [scripts/dev_metrics/github_signal.py](scripts/dev_metrics/github_signal.py) | GitHub(`gh` CLI) | 저장소별 커밋/PR/이슈 작성자 카운트 | 이 세션에 GitHub 전용 MCP는 없어 로컬 인증된 `gh` CLI로 대체 |
+| Jira/Confluence 신호 | `mcp-atlassian` MCP (`jira_search`/`confluence_search`) | 사람별 최근 티켓 총건수(Jira `total`), 문서 활동 건수(Confluence, 상한 50) | 별도 스크립트 없음 — MCP는 담당 agent만 호출 가능하므로 조회 결과를 `jira_confluence_signal_2026-09-11.json`으로 저장 |
+| [scripts/dev_metrics/combine_expert_signals.py](scripts/dev_metrics/combine_expert_signals.py) | 위 4개 산출물 결합 | 저장소/모듈별 1차 랭킹(git) + 사람별 5개 소스 종합 프로파일 표 | 개인별 성과 비교·평가로 전용 금지(라우팅 참고용) |
+
+**검증 규모**: `AutoTest_Cmd`/`LogAnalyzer`/`pvs_crawler`/`pvs_crawler_new`/
+`new_commit_review_violation_checker`/`pvs_trender`/`ldap`/`swit`/`sage-wiki` 9개 저장소를 합쳐
+고유 기여자 410명(전체 이력 기준) 규모로 실행 확인 — 목표였던 "~20명"을 크게 상회.
+
+**2026-09-11 후속 반영** (사용자 피드백): (1) `@lge.com`/`@lgepartner.com` 등 도메인이 달라도 `@` 앞부분만
+같으면 동일인으로 합산하도록 `combine_expert_signals.py`에 `normalize_person()` 추가. (2) 회사의 실제
+GitHub/GitLab은 github.com이 아니라 `mod.lge.com/hub`(자체 호스팅 GitLab)임을 반영해
+[scripts/dev_metrics/gitlab_signal.py](scripts/dev_metrics/gitlab_signal.py) 신규 작성(`~/code/mouse`의
+기존 연동 코드와 동일한 `.env`의 `LGEP_ID`/`LGEP_PASSWORD` 계정 사용) — `AutoTest_Cmd`에서 실제 Merge
+Request 활동을 확인해 github.com에서는 못 봤던 신호를 얻음. (3) 모든 소스를 180일로 통일 → 고유 인원
+391명(180일 이내 활동 기준) 확인.
