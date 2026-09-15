@@ -83,7 +83,82 @@
 
 ---
 
-## 6. 재현 방법 (Reproducibility)
+## 6. AGILEDEV-1118 데이터 전용 종합 신호 실행 결과 (2026-09-10 추가)
+
+`scripts/dev_metrics/composite_signals.py`(spec.md 완료조건 3·8, developer_evaluation_metrics.md
+1.6절)를 본인 계정으로 실행한 결과다. **설문/자기보고 없이 시스템 메타데이터만 사용했다**(1.4절
+데이터 우선 원칙). 아래 결과는 인사 평가 자료가 아니며, 자기 회고/병목 진단 용도로만 읽을 것.
+
+```bash
+cd scripts/dev_metrics
+python3 composite_signals.py --repo ~/code/llm_wiki \
+  --repos ~/code/llm_wiki ~/code/sage-wiki ~/code/cheoljoo.github.io ~/code/pvs_crawler ~/code/ccr \
+  --author "cheoljoo" --raw
+```
+
+| 대항목 | 밴드 | 근거(원시 수치, `--raw`) |
+| :--- | :--- | :--- |
+| 1. 코드 품질 및 완성도 | 우수 | 커밋 206건, 확정적 재수정 5건, revert/hotfix 0건 |
+| 2. 개발 속도와 흐름 | 우수 | merge 20건, 리드 타임 중앙값 0.94시간 |
+| 3. 협업 및 팀 기여도 | 데이터 없음 | Gerrit/Jira API 미연결(이번 실행 범위 밖) |
+| 4. 문제 정의/설계 역량 + 활동 폭·다양성 | 우수 | PoC 브랜치 0건, 실질 기여 저장소 5/5, 확장자(기술스택) 22종 |
+| 5. 지속 가능성 및 웰빙 | 양호 | 커밋 204건, 야간 비율 7.4%, 주말 비율 5.9% |
+
+* **지속적 고기여 인정 신호: 🟢 발생** — 3개 대항목이 "우수" 구간이며 품질 지표(재작업/변경실패율)도
+  양호해서 발생 조건을 만족했다.
+* **지속적 저활동 경고 신호: ⚪ 미발생** — "관찰 필요" 구간이 0개라 발생 조건(4개 이상)에 크게 못 미침.
+
+**해석 시 주의(1.5절 비대칭 원칙 재확인)**: 위 "인정 신호"는 여러 독립 축(품질+속도+다양성)이 동시에
+높다는 신뢰할 만한 양성 지표이지만, 그렇다고 "경고 신호가 없다"는 것이 "이 사람이 항상 문제 없다"는
+뜻은 아니다 — 3.협업(코드 리뷰) 축은 이번 실행에서 아예 데이터가 없었으므로(Gerrit API 미연결) 전체
+그림의 일부만 본 것이다. 반대로 만약 경고 신호가 떴더라도 그 자체를 역량 부족의 증거로 쓰면 안 되고
+사람의 확인이 먼저다(Montandon et al. 2019, 근거는 `intents/2026-09-09-developer-expertise-grading/research/papers/montandon-identifying-experts-github.md` 참고).
+
+### 6.1 방법론 보강 재실행 — 경험 원자(EA) + 월별 클러스터링 반영 (2026-09-10)
+
+위 6장 실행은 Mockus & Herbsleb(2002)·Montandon et al.(2019)의 **결론만 원칙으로 인용**했을 뿐 실제
+방법론은 구현에 없었다는 지적을 받아, `developer_evaluation_metrics.md` 1.7절에 따라 두 방법을 직접
+구현(`experience_atoms.py`, `monthly_activity_clusters.py`)하고 `composite_signals.py`에 통합해
+재실행했다.
+
+```bash
+python3 experience_atoms.py --repo ~/code/llm_wiki --author "cheoljoo"
+python3 monthly_activity_clusters.py --repo ~/code/ccr --author "cheoljoo"
+python3 composite_signals.py --repo ~/code/llm_wiki \
+  --repos ~/code/llm_wiki ~/code/sage-wiki ~/code/cheoljoo.github.io ~/code/pvs_crawler ~/code/ccr \
+  --author "cheoljoo" --raw
+```
+
+* **경험 원자(EA, Mockus & Herbsleb 2002 방법 그대로)** — `llm_wiki` 기준 총 EA 701개, 실질 경험
+  임계치(EA≥5) 기준 breadth(폭) 13개 모듈, depth(깊이) 390 EA(최심 모듈 `log`). 대항목 4의 밴드
+  산출 근거에 `ea_breadth_module_count`/`ea_depth_max`로 편입됨(대항목 4는 여전히 "우수" 유지).
+* **월별 활동 클러스터링(Montandon et al. 2019 방법을 시간축에 적용)** — `llm_wiki`는 관측 월이
+  3개뿐이라 클러스터링 미신뢰(4개월 미만) 처리됨. 이력이 긴 `ccr`로 별도 확인한 결과 저활동 클러스터
+  중심 8.75건/월, 고활동 클러스터 중심 29.0건/월, **최근 2개월 연속 저활동 클러스터**로 판정 — 이
+  클러스터링 결과가 실제로 존재한다면 "지속적 저활동 경고 신호"의 지속성(sustained) 조건 판단에
+  쓰인다(현재 `llm_wiki` 기준 실행에서는 대항목 밴드 자체가 "관찰 필요" 0개라 경고 신호는 여전히
+  미발생).
+* **재확인**: 인정 신호(🟢 발생)·경고 신호(⚪ 미발생) 결론 자체는 기존과 동일 — 이번 보강은 "왜/어떻게"
+  그 결론에 도달했는지의 근거를 논문 방법론에 맞게 더 촘촘하게 만든 것이다.
+
+### 6.2 AI Flywheel 4·7·8단계 실행 결과 (2026-09-11)
+
+* **GitHub 활동 폭 확장(8단계)** — `python3 github_activity.py --login cheoljoo --min-commits 3`:
+  총 커밋 기여 184건, 실질 기여 저장소(3커밋 이상) 15개, 언어 3종(Python/JavaScript/HTML). 사내
+  GitLab/Gerrit 활동과 별도 집계이며, 4.4절 활동 폭/다양성 지표에 합산 가능한 형태로 확인.
+* **임계치 재보정 루프(7단계)** — `composite_signals.py --log-history`로 5개 저장소(llm_wiki,
+  sage-wiki, ccr, pvs_crawler, cheoljoo.github.io) 실행 이력을 누적한 뒤 `run_history.py --show`로
+  재보정 제안을 확인: 1.2(확정적 재수정 비율) 현재 임계치 0.15 vs 실측 75백분위 0.31, 변경 실패
+  신호 비율 0.05 vs 0.03, 리드 타임 중앙값 120h vs 200.3h, 야간 커밋 비율 30% vs 45.4%, 주말 커밋
+  비율 20% vs 21.2%. **자동 반영은 하지 않았음** — 표본 5개는 재보정을 확정하기엔 적어 참고용으로만
+  기록.
+* **아키텍처 결정(4단계)** — 코드 변경 없이 결정 문서화만 진행(`developer_evaluation_metrics.md`
+  1.8절): 현재의 "Claude Code + 결정론적 Python 스크립트(LLM 추론 없음)" 구조를 PoC 단계 공식
+  아키텍처로 유지.
+
+---
+
+## 7. 재현 방법 (Reproducibility)
 
 ```bash
 # 재검증: 어느 저장소가 실제로 최근 활동이 있는지 스캔
@@ -121,6 +196,20 @@ python3 lead_time.py --repo ~/code/ccr
 python3 focus_time.py --repo ~/code/ccr --author cheoljoo.lee
 python3 burnout_signals.py --repo ~/code/ccr --author cheoljoo.lee
 python3 complexity.py --path ~/code/ccr --threshold 15
+
+# AGILEDEV-1118: 활동 폭/다양성 + 데이터 전용 종합 신호 (6장 결과 재현)
+python3 activity_breadth.py --repos ~/code/llm_wiki ~/code/sage-wiki \
+  ~/code/cheoljoo.github.io ~/code/pvs_crawler ~/code/ccr --author "cheoljoo"
+python3 composite_signals.py --repo ~/code/llm_wiki \
+  --repos ~/code/llm_wiki ~/code/sage-wiki ~/code/cheoljoo.github.io ~/code/pvs_crawler ~/code/ccr \
+  --author "cheoljoo" --raw
+
+# AGILEDEV-1118: AI Flywheel 4·7·8단계 (6.2절 결과 재현)
+python3 github_activity.py --login cheoljoo --min-commits 3
+for repo in llm_wiki sage-wiki ccr pvs_crawler cheoljoo.github.io; do
+  python3 composite_signals.py --repo ~/code/$repo --author "cheoljoo" --log-history
+done
+python3 run_history.py --show
 ```
 
 > 원본 JSON/CSV는 개인 작업 상세 내용(티켓 제목, 커밋 메시지 등)을 포함하므로 `/tmp`에만 저장했고 이 저장소에는 커밋하지 않았다.
