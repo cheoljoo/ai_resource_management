@@ -4,6 +4,31 @@
 
 모든 스크립트는 외부 패키지 없이 Python 표준 라이브러리와 `git` CLI만 사용하며, `--repo` 옵션으로 대상 저장소 경로를 지정해 **어떤 git 저장소에도** 재사용할 수 있다.
 
+## 0. 브랜치별 작업 요약 (병합 후 정리, 2026-09-15)
+
+두 개의 독립된 intent 브랜치가 `main`에 병합됐다(`5a8b675`, `55299f1`). 둘은 **목적이 다르다** — 아래를
+먼저 읽고 어느 쪽 스크립트/문서를 봐야 하는지 파악할 것. 자세한 배경은 각 intent 문서(intent/spec/plan)
+참고, 리서치 원본은 바로 아래 링크로 접근한다.
+
+| | **AGILEDEV-1118** — 개인 진단 프로필 | **AGILEDEV-1132** — 전문가 파인더 (Expert Finder) |
+| :--- | :--- | :--- |
+| 브랜치 | `intent/2026-09-09-developer-expertise-grading` | `intent/2026-09-11-expert-finder` (전자에서 분기) |
+| intent 문서 | [intent.md](intents/2026-09-09-developer-expertise-grading/intent.md) · [spec.md](intents/2026-09-09-developer-expertise-grading/spec.md) · [plan.md](intents/2026-09-09-developer-expertise-grading/plan.md) | [intent.md](intents/2026-09-11-expert-finder/intent.md) · [spec.md](intents/2026-09-11-expert-finder/spec.md) · [plan.md](intents/2026-09-11-expert-finder/plan.md) |
+| 범위 | **본인(cheoljoo.lee) 범위 한정.** "등급"이 아니라 5대 대항목 다차원 프로필 + 양극단만 명시적 신호(지속적 고기여 인정/저활동 경고)로 분리(D안). | **타인 데이터 예외 허용**(라우팅 목적 한정) — "회사 안의 어떤 사람이 전문가인지"를 정성 평가 없이 데이터만으로 식별. |
+| 핵심 산출 스크립트 | `composite_signals.py`(종합 프로필), `activity_breadth.py`, `monthly_activity_clusters.py`, `run_history.py`, `github_activity.py`, `experience_atoms.py`(공용) | `expert_finder.py`, `gerrit_signal.py`, `gitlab_signal.py`, `github_signal.py`, `jira_confluence_signal.py`, `combine_expert_signals.py` |
+| Make 타겟 | `make profile` / `activity-breadth` / `monthly-clusters` / `run-history` / `github-activity` (위 "(A)" 그룹) | `make expert-finder` / `gerrit` / `gitlab` / `github` / `jira-confluence` / `combine` / `all` (위 "(B)" 그룹) |
+| 문서 반영처 | `developer_evaluation_metrics.md` 1.2~1.9절, 대항목 1~5, 4.4절(활동 폭/다양성) | `developer_evaluation_metrics.md` 6.6절(POC 요약), 8장(5개 소스 결합 상세) |
+| 리서치 원본 | [research/](intents/2026-09-09-developer-expertise-grading/research/) — 빅테크 4개사 사례([company-practices.md](intents/2026-09-09-developer-expertise-grading/research/company-practices.md)), 논문 11편([papers/README.md](intents/2026-09-09-developer-expertise-grading/research/papers/README.md) 인덱스), AI Flywheel 진단([pwc-genai-flywheel.md](intents/2026-09-09-developer-expertise-grading/research/pwc-genai-flywheel.md)), 유스케이스 우선순위 비교([usecase-portfolio-comparison.md](intents/2026-09-09-developer-expertise-grading/research/usecase-portfolio-comparison.md)) | (별도 리서치 없음 — AGILEDEV-1118의 리서치, 특히 Mockus & Herbsleb 2002·Montandon et al. 2019 두 편을 그대로 이어받음) |
+
+**병합 중 발견·수정한 버그 (2026-09-15)**: 두 브랜치가 `experience_atoms.py`를 각자 수정하면서 AGILEDEV-1132
+쪽에서 `summarize_breadth_depth()` 함수를 `breadth_depth()`로 이름·시그니처를 바꿨는데, AGILEDEV-1118의
+`composite_signals.py`는 옛 이름/시그니처를 그대로 호출하고 있어 병합 후 `ImportError`로 깨져 있었다
+(`make profile` 등 (A) 그룹 전체가 실행 자체가 안 됐음 — 테스트 스위트에는 이 통합 경로에 대한 커버리지가
+없어서 `make test-*`로는 못 잡혔다). `compute_experience_atoms()`의 인자 순서(`(repo, branch, author)`
+→ `(repo, author, module_depth, branch=...)`)도 함께 바뀐 것까지 반영해 `composite_signals.py`를
+새 API에 맞게 고쳤다 — 수정 후 `make profile`/`activity-breadth`/`monthly-clusters`/`run-history` 4개
+타겟 모두 실제 저장소로 재검증 완료.
+
 ## 실행 방법
 
 **2026-09-15 추가:** 전문가 파인더의 Jira·Confluence 자동 수집은

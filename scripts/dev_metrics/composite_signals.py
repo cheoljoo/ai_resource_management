@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from activity_breadth import compute_activity_breadth
 from burnout_signals import compute_burnout_signals
 from change_failure_signals import find_hotfix_branches, find_keyword_commits, find_revert_commits
-from experience_atoms import compute_experience_atoms, summarize_breadth_depth
+from experience_atoms import breadth_depth, compute_experience_atoms
 from git_utils import iter_commits
 from lead_time import compute_lead_times
 from monthly_activity_clusters import compute_clusters
@@ -107,8 +107,13 @@ def _problem_solving_band(repo: str, branch: str, author: str | None, activity: 
     poc_rows = [r for r in (analyze_branch(repo, b, base) for b in branches) if r]
     poc_count = sum(1 for r in poc_rows if r["is_poc"])
 
-    ea = compute_experience_atoms(repo, branch, author)
-    ea_summary = summarize_breadth_depth(ea, min_ea=5)
+    ea = compute_experience_atoms(repo, author, module_depth=2, branch=branch)
+    ea_breadth, ea_depth, ea_deepest_module = breadth_depth(ea["module_ea"], min_ea=5)
+    ea_summary = {
+        "breadth_module_count": ea_breadth,
+        "depth_max_ea": ea_depth,
+        "deepest_module": ea_deepest_module,
+    }
 
     evidence = {
         "poc_branch_count": poc_count,

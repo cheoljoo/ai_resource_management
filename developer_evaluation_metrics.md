@@ -7,6 +7,16 @@
 > 상당 부분을 SMILE이 이미 커밋/MR 단위로 자동 산출하고 있음을 확인했다. 자세한 내용은 [5장 SMILE 플랫폼 활용 방안](#5-smile-플랫폼-활용-방안-2026-09-신규-반영) 참고 —
 > **커스텀 LLM 매칭 로직을 새로 만들기보다 SMILE의 기존 분석 결과를 데이터 소스로 우선 활용하는 방향으로 전략을 수정한다.**
 
+> **2026-09-15 업데이트 — 리서치/브랜치 안내**: 이 문서의 1.7~1.9절, 4.4절, 6.6절, 8장은
+> [intents/2026-09-09-developer-expertise-grading/](intents/2026-09-09-developer-expertise-grading/)에서
+> 진행한 조사·구현을 반영한 것이다. 빅테크 4개사 사례(Google/Spotify/Uber/LinkedIn — [research/company-practices.md](intents/2026-09-09-developer-expertise-grading/research/company-practices.md)),
+> 학술 논문 11편([research/papers/README.md](intents/2026-09-09-developer-expertise-grading/research/papers/README.md) 인덱스),
+> PwC GenAI Flywheel 관점 진단([research/pwc-genai-flywheel.md](intents/2026-09-09-developer-expertise-grading/research/pwc-genai-flywheel.md))의
+> 원본은 이 링크들로 바로 접근할 수 있다. 이 작업은 이후 **AGILEDEV-1118**(개인 진단 프로필, 본인 범위 한정)과
+> **AGILEDEV-1132**(전문가 파인더, 조직 전체 라우팅)로 갈라져 각각 다른 브랜치에서 진행됐다 — 두 작업이 실제로
+> 무엇을 했는지, 어느 스크립트/Make 타겟이 어느 쪽인지는 [dev_metrics_code_map.md "0. 브랜치별 작업
+> 요약"](dev_metrics_code_map.md#0-브랜치별-작업-요약-병합-후-정리-2026-09-15) 참고.
+
 ---
 
 ## 1. 개요 및 핵심 원칙
@@ -765,23 +775,22 @@ API Key 발급 절차가 "사람이 웹 UI에서 1회성으로 발급"해야 하
 * **분석 방식**: 3.2(지식 자산화 및 문서화)를 "문서 생성 수"뿐 아니라 "다른 사람이 만든 문서에 대한
   유의미한 코멘트/개선 제안 수"까지 확장해 지식 공유의 양방향성을 포착.
 
-### 6.6 전문가 파인더 (Expert Finder) — POC, 2026-09-11
+### 6.6 전문가 파인더 (Expert Finder) — POC 요약 (전체 내용은 8장으로 이관, 2026-09-11 → 09-15 갱신)
 > [!NOTE]
-> **spec.md "범위 밖" 절의 명시적 예외**: 이 항목만 저장소의 모든 기여자(본인 외 타인 포함)의 EA를
-> 집계한다. 공유 저장소에 이미 공개된 git log(git blame과 동일 수준 정보)를 "누구에게 물어볼까"라는
-> 라우팅 목적으로만 쓰는 것으로 한정하며, 개인 성과 평가·비교에는 쓰지 않는다. **PoC이므로 최근 14일
-> (2주)치 데이터로만 범위를 제한**했다(2026-09-11 사용자 결정) — 전체 이력 확장 여부는 이 PoC 결과를
-> 보고 별도로 판단한다.
-* **측정 가능 여부**: `[O] 자동 수집 가능`
-* **Claude 직접 수집 가능 여부**: `✅ 즉시 가능`
-* **사용 데이터 소스**: 팀 공유 git 저장소의 최근 14일치 커밋 이력(모든 기여자)
-* **분석 방식**: 1.7절의 경험 원자(EA) 방법을 저장소의 전체 기여자에게 적용 — (모듈, 기여자)별로
-  EA를 누적 집계해, 특정 모듈에 대해 최근 가장 많이·최근에 손댄 사람을 순위로 보여준다. Mockus &
-  Herbsleb(2002)이 실증한 병목(전문가를 찾는 데 걸리는 지연) 해소가 목적.
-* **보완/주의점**: "최근 많이 만졌다"는 "역량이 뛰어나다"는 뜻이 아니다(1.3절 Goodhart's Law) — 질문할
-  사람을 찾는 라우팅 신호로만 쓴다. PoC 범위(2주)가 짧아 장기 전문가(오래 전에 만들고 최근엔 안정적이라
-  손 안 대는 사람)를 놓칠 수 있음 — 전체 이력 확장 시 재평가 필요.
-* **구현**: [scripts/dev_metrics/expert_finder.py](scripts/dev_metrics/expert_finder.py).
+> **이 절은 더 이상 최신 상태가 아니다.** 여기 있던 "최근 14일 제한 PoC" 내용은 [AGILEDEV-1132](#8-전문가-파인더-expert-finder--agiledev-1132-2026-09-11)로
+> 이어져 git 외 Gerrit/GitLab/Jira/Confluence/GitHub까지 5개 소스로 확장됐고, `--since-days`도
+> 옵션화되어 라우팅 목적에는 14일, 조직 전체 그림에는 180일 등으로 상황에 맞게 쓴다. **최신 내용은
+> [8장](#8-전문가-파인더-expert-finder--agiledev-1132-2026-09-11)을 볼 것** — 이 절은 "처음에 어떻게
+> 시작됐는지"를 보여주는 역사적 기록으로만 남긴다.
+
+* **최초 구현**: [scripts/dev_metrics/expert_finder.py](scripts/dev_metrics/expert_finder.py) — 1.7절의
+  경험 원자(EA) 방법을 저장소의 전체 기여자에게 적용해, (모듈, 기여자)별 EA를 누적 집계하고 특정 모듈에
+  대해 최근 가장 많이 손댄 사람을 순위로 보여준다. Mockus & Herbsleb(2002)이 실증한 병목(전문가를 찾는
+  데 걸리는 지연) 해소가 목적.
+* **spec.md "범위 밖" 절의 명시적 예외**: 저장소의 모든 기여자(본인 외 타인 포함)의 EA를 집계하는 것
+  자체는 여전히 예외 조항이다 — 공유 저장소에 이미 공개된 git log(git blame과 동일 수준 정보)를
+  "누구에게 물어볼까"라는 라우팅 목적으로만 쓰고, 개인 성과 평가·비교에는 쓰지 않는다(8.3절에서 5개
+  소스 전체로 확장 적용).
 
 ---
 

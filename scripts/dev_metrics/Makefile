@@ -1,12 +1,25 @@
-# 전문가 파인더 (Expert Finder, AGILEDEV-1132) — 5개 소스 결합 파이프라인
+# 개발자 평가 메트릭 파이프라인 — 두 브랜치가 병합된 상태 (2026-09-15 정리)
 #
-# 데이터 소스 5종과 담당:
-#   git(사내+GitHub) → expert_finder.py         : 로컬 clone, 이 Makefile이 직접 실행
-#   Gerrit           → gerrit_signal.py         : ~/code/ccr/global_variables.py 자격증명, 이 Makefile이 직접 실행
-#   GitLab(mod.lge.com/hub) → gitlab_signal.py  : .env의 GITLAB_TOKEN/GITLAB_BASE_URL
-#   GitHub(선택)      → github_signal.py         : 인증된 gh CLI, Python 실행은 uv
-#   Jira             → jira_confluence_signal.py : .env의 JIRA_* 설정으로 REST 조회
-#   Confluence       → jira_confluence_signal.py : .env의 CONFLUENCE_* 설정으로 REST 조회
+# 이 Makefile은 서로 다른 목적의 두 파이프라인을 함께 담고 있다 — 자세한 배경은
+# ../../dev_metrics_code_map.md "0. 브랜치별 작업 요약" 절 참고:
+#
+#   (A) 개인 진단 프로필 (AGILEDEV-1118, intent/2026-09-09-developer-expertise-grading) — "profile"
+#       그룹 타겟. 본인 범위 한정(spec.md 원칙), 5대 대항목 다차원 프로필 + 인정/경고 신호를 산출한다.
+#       핵심: composite_signals.py, activity_breadth.py, monthly_activity_clusters.py, run_history.py,
+#       github_activity.py, experience_atoms.py.
+#
+#   (B) 전문가 파인더 (Expert Finder, AGILEDEV-1132, intent/2026-09-11-expert-finder) — 기존 5개 소스
+#       결합 타겟. 본인 범위 한정 원칙의 명시적 예외(라우팅 목적, 공유 git log만) — "회사 안의 어떤
+#       사람이 전문가인지"를 데이터로만 찾는다. 데이터 소스 5종과 담당:
+#         git(사내+GitHub) → expert_finder.py         : 로컬 clone, 이 Makefile이 직접 실행
+#         Gerrit           → gerrit_signal.py         : ~/code/ccr/global_variables.py 자격증명, 이 Makefile이 직접 실행
+#         GitLab(mod.lge.com/hub) → gitlab_signal.py  : .env의 GITLAB_TOKEN/GITLAB_BASE_URL
+#         GitHub(선택)      → github_signal.py         : 인증된 gh CLI, Python 실행은 uv
+#         Jira             → jira_confluence_signal.py : .env의 JIRA_* 설정으로 REST 조회
+#         Confluence       → jira_confluence_signal.py : .env의 CONFLUENCE_* 설정으로 REST 조회
+#
+# (A)와 (B)를 혼동하지 말 것: (A)는 "나는 어떤가"(본인 회고), (B)는 "이 모듈은 누구에게 물어볼까"
+# (조직 전체 라우팅)이다 — 둘 다 인사 평가에는 쓰지 않는다(developer_evaluation_metrics.md 7장).
 #
 # 결과물은 모두 output/ 아래에 쌓인다(make help 참고).
 
@@ -56,14 +69,30 @@ JC_ROSTER ?= jira_confluence_signal_2026-09-11.json
 JC_ENV ?= ../../.env
 JC_JSON ?= $(OUT)/jira_confluence_signal_$(DATE).json
 
-.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean
+# --- (A) 개인 진단 프로필 (AGILEDEV-1118) 전용 변수 ---
+# 본인 범위 한정이므로 PROFILE_AUTHOR를 반드시 본인 것으로 지정할 것(기본값은 예시일 뿐).
+PROFILE_AUTHOR ?= cheoljoo
+PROFILE_REPO ?= $(HOME)/code/llm_wiki
+PROFILE_REPOS ?= $(REPOS)
+# activity_breadth.py/composite_signals.py의 --repos는 nargs='+'라 반복 플래그가 아니라
+# 한 번의 --repos 뒤에 공백으로 나열해야 한다(expert-finder의 REPO_ARGS와는 다른 형태이니 혼동 주의).
+PROFILE_REPO_ARGS := --repos $(PROFILE_REPOS)
+GITHUB_LOGIN ?=
+
+.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity
 
 help:
-	@echo "전문가 파인더 (AGILEDEV-1132) — 사용 가능한 타겟"
+	@echo "개발자 평가 메트릭 파이프라인 — 사용 가능한 타겟 (병합 후 정리, 2026-09-15)"
 	@echo ""
-	@echo "  make verify           - 7개 스크립트가 정상 동작하는지 --help로 확인"
-	@echo "  make test-jira-confluence - Jira/Confluence 수집기 단위 테스트 (네트워크 불필요)"
-	@echo "  make test-gerrit       - Gerrit 수집/결합 리포트 단위 테스트 (네트워크 불필요)"
+	@echo "== (A) 개인 진단 프로필 (AGILEDEV-1118, 본인 범위 한정) =="
+	@echo "  make profile PROFILE_AUTHOR=<본인> PROFILE_REPO=<주 저장소> - 5대 대항목 다차원 프로필"
+	@echo "                          + 인정/경고 신호 산출 (composite_signals.py)"
+	@echo "  make activity-breadth  - 여러 저장소에 걸친 활동 폭/다양성(4.4절) 산출"
+	@echo "  make monthly-clusters  - 월별 활동 비지도 클러스터링(Montandon et al. 2019 방법)"
+	@echo "  make github-activity GITHUB_LOGIN=<계정> - GitHub 기여 이력으로 활동 폭 확장(6.3절)"
+	@echo "  make run-history       - 누적 실행 이력 요약 + 임계치 재보정 제안(AI Flywheel 7단계)"
+	@echo ""
+	@echo "== (B) 전문가 파인더 (Expert Finder, AGILEDEV-1132, 조직 전체 라우팅) =="
 	@echo "  make expert-finder    - git 기반 저장소/모듈별 전문가 랭킹 산출"
 	@echo "                          -> $(OUT)/expert_finder_<날짜>.txt"
 	@echo "  make gerrit           - Gerrit(na/lamp) 리뷰·댓글·병합·submitter 메타데이터 수집"
@@ -73,28 +102,39 @@ help:
 	@echo "                          -> $(OUT)/gitlab_signal_<날짜>.json, .txt"
 	@echo "  make github GITHUB_REPOS='owner/repo' - GitHub PR·리뷰·댓글·실제 병합자 수집"
 	@echo "  make mr-pr            - GitLab MR + 지정된 GitHub PR 수집 (MR_PR_LIMIT=0: 전체)"
-	@echo "  make test-mr-pr        - MR/PR 수집기 및 결합 테스트 (uv, 네트워크 불필요)"
 	@echo "  make jira-confluence  - .env의 PAT로 Jira/Confluence 신호 수집"
 	@echo "                          -> $(JC_JSON)"
 	@echo "  make combine          - git+Gerrit+GitLab+수집된 Jira/Confluence JSON을 결합한"
 	@echo "                          최종 리포트 산출 -> $(OUT)/combined_report_<날짜>.txt"
 	@echo "  make all              - gerrit + gitlab + jira-confluence (+ 지정된 github) 후 combine"
+	@echo ""
+	@echo "== 공통 =="
+	@echo "  make verify           - 모든 스크립트가 --help로 정상 동작하는지 확인"
+	@echo "  make test-jira-confluence - Jira/Confluence 수집기 단위 테스트 (네트워크 불필요)"
+	@echo "  make test-gerrit       - Gerrit 수집/결합 리포트 단위 테스트 (네트워크 불필요)"
+	@echo "  make test-mr-pr        - MR/PR 수집기 및 결합 테스트 (uv, 네트워크 불필요)"
 	@echo "  make clean            - $(OUT)/ 삭제"
 	@echo ""
 	@echo "SINCE_DAYS=$(SINCE_DAYS) (예: make all SINCE_DAYS=90 으로 기간 변경 가능)"
+	@echo "PROFILE_AUTHOR=$(PROFILE_AUTHOR) PROFILE_REPO=$(PROFILE_REPO) (반드시 본인 값으로 지정할 것)"
 
 $(OUT):
 	mkdir -p $(OUT)
 
 verify: $(OUT)
 	@echo "== experience_atoms.py =="; uv run experience_atoms.py --help > $(OUT)/verify_experience_atoms.txt
+	@echo "== composite_signals.py =="; uv run composite_signals.py --help > $(OUT)/verify_composite_signals.txt
+	@echo "== activity_breadth.py =="; uv run activity_breadth.py --help > $(OUT)/verify_activity_breadth.txt
+	@echo "== monthly_activity_clusters.py =="; uv run monthly_activity_clusters.py --help > $(OUT)/verify_monthly_activity_clusters.txt
+	@echo "== run_history.py =="; uv run run_history.py --help > $(OUT)/verify_run_history.txt
+	@echo "== github_activity.py =="; uv run github_activity.py --help > $(OUT)/verify_github_activity.txt
 	@echo "== expert_finder.py =="; uv run expert_finder.py --help > $(OUT)/verify_expert_finder.txt
 	@echo "== gerrit_signal.py =="; uv run gerrit_signal.py --help > $(OUT)/verify_gerrit_signal.txt
 	@echo "== gitlab_signal.py =="; uv run gitlab_signal.py --help > $(OUT)/verify_gitlab_signal.txt
 	@echo "== github_signal.py =="; uv run github_signal.py --help > $(OUT)/verify_github_signal.txt
 	@echo "== jira_confluence_signal.py =="; uv run jira_confluence_signal.py --help > $(OUT)/verify_jira_confluence_signal.txt
 	@echo "== combine_expert_signals.py =="; uv run combine_expert_signals.py --help > $(OUT)/verify_combine.txt
-	@echo "7개 스크립트 모두 정상 동작 확인 완료 (결과: $(OUT)/verify_*.txt)"
+	@echo "13개 스크립트 모두 정상 동작 확인 완료 (결과: $(OUT)/verify_*.txt)"
 
 test-jira-confluence:
 	uv run --with 'requests>=2.32,<3' --with 'python-dotenv>=1,<2' python -m unittest discover -s tests -p 'test_jira_confluence_signal.py' -v
@@ -105,6 +145,28 @@ test-gerrit:
 test-mr-pr:
 	uv run --with 'requests>=2.32,<3' --with 'python-dotenv>=1,<2' python -m unittest discover -s tests -p 'test_git*signal.py' -v
 	uv run python -m unittest discover -s tests -p 'test_combine_mr_pr_signals.py' -v
+
+# --- (A) 개인 진단 프로필 타겟 (AGILEDEV-1118) ---
+
+profile: $(OUT)
+	uv run composite_signals.py --repo "$(PROFILE_REPO)" $(PROFILE_REPO_ARGS) --author "$(PROFILE_AUTHOR)" \
+		| tee $(OUT)/profile_$(DATE).txt
+
+activity-breadth: $(OUT)
+	uv run activity_breadth.py $(PROFILE_REPO_ARGS) --author "$(PROFILE_AUTHOR)" \
+		| tee $(OUT)/activity_breadth_$(DATE).txt
+
+monthly-clusters: $(OUT)
+	uv run monthly_activity_clusters.py --repo "$(PROFILE_REPO)" --author "$(PROFILE_AUTHOR)" \
+		| tee $(OUT)/monthly_clusters_$(DATE).txt
+
+github-activity: $(OUT)
+	@test -n "$(strip $(GITHUB_LOGIN))" || { echo "ERROR: GITHUB_LOGIN=<본인 GitHub 계정>을 지정하세요."; exit 1; }
+	uv run github_activity.py --login "$(GITHUB_LOGIN)" \
+		| tee $(OUT)/github_activity_$(DATE).txt
+
+run-history: $(OUT)
+	uv run run_history.py --show
 
 expert-finder: $(OUT)
 	uv run expert_finder.py $(REPO_ARGS) --since-days $(SINCE_DAYS) --top 3 \
