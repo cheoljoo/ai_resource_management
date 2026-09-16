@@ -79,7 +79,7 @@ PROFILE_REPOS ?= $(REPOS)
 PROFILE_REPO_ARGS := --repos $(PROFILE_REPOS)
 GITHUB_LOGIN ?=
 
-.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity
+.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review
 
 help:
 	@echo "개발자 평가 메트릭 파이프라인 — 사용 가능한 타겟 (병합 후 정리, 2026-09-15)"
@@ -91,6 +91,11 @@ help:
 	@echo "  make monthly-clusters  - 월별 활동 비지도 클러스터링(Montandon et al. 2019 방법)"
 	@echo "  make github-activity GITHUB_LOGIN=<계정> - GitHub 기여 이력으로 활동 폭 확장(6.3절)"
 	@echo "  make run-history       - 누적 실행 이력 요약 + 임계치 재보정 제안(AI Flywheel 7단계)"
+	@echo "  make test-adequacy     - 테스트 파일 동반 여부 비율 (agent-action-items.md A4)"
+	@echo ""
+	@echo "== agent-action-items.md A1/A2 POC (Gerrit 라이브 조회) =="
+	@echo "  make review-quality    - 리뷰 코멘트 라인단위/스레드 비율 (메타데이터 전용, A1)"
+	@echo "  make cross-team-review - 오너 vs 리뷰 프로젝트 교차 참여 비율 (A2)"
 	@echo ""
 	@echo "== (B) 전문가 파인더 (Expert Finder, AGILEDEV-1132, 조직 전체 라우팅) =="
 	@echo "  make expert-finder    - git 기반 저장소/모듈별 전문가 랭킹 산출"
@@ -167,6 +172,20 @@ github-activity: $(OUT)
 
 run-history: $(OUT)
 	uv run run_history.py --show
+
+test-adequacy: $(OUT)
+	uv run test_adequacy.py --repo "$(PROFILE_REPO)" --author "$(PROFILE_AUTHOR)" \
+		| tee $(OUT)/test_adequacy_$(DATE).txt
+
+# --- agent-action-items.md A1/A2 POC (Gerrit 라이브 조회, 소규모 표본) ---
+
+review-quality: $(OUT)
+	uv run review_quality_signal.py $(GERRIT_SERVER_ARGS) --since-days 60 --limit-per-server 5 \
+		| tee $(OUT)/review_quality_$(DATE).txt
+
+cross-team-review: $(OUT)
+	uv run cross_team_review_signal.py $(GERRIT_SERVER_ARGS) --since-days 60 --limit-per-server 100 \
+		| tee $(OUT)/cross_team_review_$(DATE).txt
 
 expert-finder: $(OUT)
 	uv run expert_finder.py $(REPO_ARGS) --since-days $(SINCE_DAYS) --top 3 \

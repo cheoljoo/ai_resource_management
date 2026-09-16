@@ -868,9 +868,15 @@ project/owner/시간 등 메타데이터만 집계한다. Jira/Confluence도 동
 
 ### 8.6 알려진 한계
 
-1. Gerrit 신호는 조회한 두 서버(na/lamp)가 이번 git 로스터와 프로젝트 중복이 낮아 대부분 0 — 서버·프로젝트
-   매핑을 더 정교화할 여지가 있음(예: 로스터 인원의 실제 소속 프로젝트를 먼저 파악 후 해당 Gerrit
-   서버만 조회).
+1. ~~Gerrit 신호는 조회한 두 서버(na/lamp)가 이번 git 로스터와 프로젝트 중복이 낮아 대부분 0~~ —
+   **2026-09-16 재조사로 해소**: 설정된 11개 Gerrit 서버(`gpro/lamp/na/eu/as/adas/acp/rn/nissan/
+   ccu2/prosys`) 전체를 소량 조회한 결과, **na/lamp가 이미 정확한 서버였다**. 로스터가 다루는
+   `tiger/*` 프로젝트는 na/lamp에만 존재하고, 나머지 6개 서버는 완전히 다른 고객사/차종 프로젝트
+   (아우디/폭스바겐, 현대차, webOS, 르노, 닛산 등)를 다뤄 애초에 겹칠 수 없는 구조다 — "매핑이
+   틀렸다"가 아니라 "회사가 고객사별로 Gerrit 서버를 완전히 분리 운영한다"는 사실 확인. 여전히 신호가
+   낮게 나오는 원인은 서버 선택이 아니라 **표본 범위(조회 기간/건수)** 문제일 가능성이 큼. 별도로
+   `gpro`/`prosys`는 401 인증 실패(자격증명 이슈), `ccu2`는 접근되나 활동 0건 — 이 셋은 여전히 확인
+   필요. 상세: `agent-action-items.md` A5, [scripts/dev_metrics/cross_team_review_signal.py](scripts/dev_metrics/cross_team_review_signal.py).
 2. Confluence 신호는 `confluence_search`의 페이지당 상한(50)만 확인했을 뿐 정확한 총 건수는 아님 —
    "활동 있음(50 도달)/불명확" 수준의 근사치. (2026-09-11 업데이트: CQL에 `lastmodified >= now("-180d")`를
    명시해 최소한 "180일 이내"라는 조건 자체는 정확하게 지켜지도록 수정함.)

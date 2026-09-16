@@ -67,6 +67,9 @@ python3 <script>.py --repo /path/to/target/repo [옵션들]
 | 신규: 월별 활동 클러스터링 (1.6/1.7절) | [monthly_activity_clusters.py](scripts/dev_metrics/monthly_activity_clusters.py) | ✅ 즉시 가능 | Montandon et al.(2019)의 비지도 클러스터링 방법을 시간축에 적용 — 본인의 월별 커밋 수를 표준 라이브러리 k=2 k-means로 고활동/저활동 클러스터로 분리, 두 신호의 "지속성(sustained)" 판단 근거 제공 | 사람 간 비교는 spec.md 범위 밖이라 시간축으로만 적용. 관측치(월) 4개 미만이면 클러스터링 미신뢰 처리 |
 | 신규: 종합 로직 (spec.md 완료조건 3·8) | [composite_signals.py](scripts/dev_metrics/composite_signals.py) | ✅ 즉시 가능 (위 스크립트들을 조합) | 5대 대항목별 밴드(관찰 필요/양호/우수/데이터 없음)를 산출하고, EA·월별 클러스터링 결과를 반영해 **지속적 고기여 인정 신호**·**지속적 저활동 경고 신호**(1.6절) 두 가지를 계산. 최소 3개 대항목 데이터 가드레일, 단일 지표 금지, 트리거일 뿐이라는 경고 문구, 클러스터링 기반 지속성 검증 포함 | 3.협업(코드 리뷰) 대항목은 Gerrit API 없이는 항상 "데이터 없음" — 밴드 임계치(리드타임 등)는 1차 하드코딩(실측 데이터로 추후 보정 필요, 클러스터링으로 대체 가능한 부분은 이미 대체함) |
 | (공통 유틸) | [git_utils.py](scripts/dev_metrics/git_utils.py) | - | 위 스크립트들이 공유하는 `git log`/`git branch` 파싱 헬퍼 (`Commit` dataclass, `iter_commits`, `list_branches`, `default_branch`) | - |
+| 신규: 테스트 충분성 (1.7절, A4) | [test_adequacy.py](scripts/dev_metrics/test_adequacy.py) | ✅ 즉시 가능 | 커밋이 프로덕션 코드를 건드릴 때 테스트 코드도 함께 바뀌었는지 비율로 집계 | 커버리지 도구(coverage.py 등) 실행은 범위 밖 — 파일 동반 여부만 판별 |
+| 신규: 리뷰 코멘트 품질 (3.1절, A1) | [review_quality_signal.py](scripts/dev_metrics/review_quality_signal.py) | 🔑 API 필요 (수집) / ✅ 즉시 가능 (메타데이터 분석) | Gerrit 코멘트의 라인단위 여부·후속 스레드(reply) 여부를 메타데이터만으로 집계 | "구체성"(코드 인용 등)은 코멘트 본문이 필요한데 `gerrit_signal.py`가 본문을 애초에 수집하지 않도록 설계돼 있어(7장) 판별 불가 — 별도 결정 필요 |
+| 신규: 크로스팀 리뷰 참여 (6.4절, A2) | [cross_team_review_signal.py](scripts/dev_metrics/cross_team_review_signal.py) | 🔑 API 필요 | Gerrit change의 owner/vote 정보로 "본인 오너 프로젝트 vs 리뷰한 프로젝트" 교차 비율 계산 | Jira 쪽(담당 프로젝트 외 이슈 참여)은 미구현 — mcp-atlassian 연결 필요. 작은 표본에서는 교차율이 과대평가될 수 있음 |
 
 ## 코드화하지 않은 항목과 이유
 
