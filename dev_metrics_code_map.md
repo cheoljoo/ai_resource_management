@@ -69,7 +69,8 @@ python3 <script>.py --repo /path/to/target/repo [옵션들]
 | (공통 유틸) | [git_utils.py](scripts/dev_metrics/git_utils.py) | - | 위 스크립트들이 공유하는 `git log`/`git branch` 파싱 헬퍼 (`Commit` dataclass, `iter_commits`, `list_branches`, `default_branch`) | - |
 | 신규: 테스트 충분성 (1.7절, A4) | [test_adequacy.py](scripts/dev_metrics/test_adequacy.py) | ✅ 즉시 가능 | 커밋이 프로덕션 코드를 건드릴 때 테스트 코드도 함께 바뀌었는지 비율로 집계 | 커버리지 도구(coverage.py 등) 실행은 범위 밖 — 파일 동반 여부만 판별 |
 | 신규: 리뷰 코멘트 품질 (3.1절, A1) | [review_quality_signal.py](scripts/dev_metrics/review_quality_signal.py) | 🔑 API 필요 (수집) / ✅ 즉시 가능 (메타데이터 분석) | Gerrit 코멘트의 라인단위 여부·후속 스레드(reply) 여부를 메타데이터만으로 집계 | "구체성"(코드 인용 등)은 코멘트 본문이 필요한데 `gerrit_signal.py`가 본문을 애초에 수집하지 않도록 설계돼 있어(7장) 판별 불가 — 별도 결정 필요 |
-| 신규: 크로스팀 리뷰 참여 (6.4절, A2) | [cross_team_review_signal.py](scripts/dev_metrics/cross_team_review_signal.py) | 🔑 API 필요 | Gerrit change의 owner/vote 정보로 "본인 오너 프로젝트 vs 리뷰한 프로젝트" 교차 비율 계산 | Jira 쪽(담당 프로젝트 외 이슈 참여)은 미구현 — mcp-atlassian 연결 필요. 작은 표본에서는 교차율이 과대평가될 수 있음 |
+| 신규: 크로스팀 리뷰 참여 (6.4절, A2) | [cross_team_review_signal.py](scripts/dev_metrics/cross_team_review_signal.py) | 🔑 API 필요 | Gerrit change의 owner/vote 정보로 "본인 오너 프로젝트 vs 리뷰한 프로젝트" 교차 비율 계산 | 작은 표본에서는 교차율이 과대평가될 수 있음(전체 이력 재실행 권장) |
+| 신규: Jira 교차 프로젝트 + Confluence 양방향 신호 (6.5절, A2/A3) | [jira_confluence_expansion.py](scripts/dev_metrics/jira_confluence_expansion.py) | 🔑 API 필요 (`.env` PAT — mcp-atlassian 불필요) | Jira 담당 이슈의 프로젝트별 분포로 "주 프로젝트 외 참여 비율" 계산, Confluence는 본인이 만들지 않은 페이지에 남긴 코멘트 수 계산 | Confluence 쪽은 코멘트마다 페이지 이력 조회가 추가로 필요해 `--max-comments-per-person`으로 표본 제한 |
 
 ## 코드화하지 않은 항목과 이유
 

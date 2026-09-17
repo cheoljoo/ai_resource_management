@@ -877,9 +877,12 @@ project/owner/시간 등 메타데이터만 집계한다. Jira/Confluence도 동
    낮게 나오는 원인은 서버 선택이 아니라 **표본 범위(조회 기간/건수)** 문제일 가능성이 큼. 별도로
    `gpro`/`prosys`는 401 인증 실패(자격증명 이슈), `ccu2`는 접근되나 활동 0건 — 이 셋은 여전히 확인
    필요. 상세: `agent-action-items.md` A5, [scripts/dev_metrics/cross_team_review_signal.py](scripts/dev_metrics/cross_team_review_signal.py).
-2. Confluence 신호는 `confluence_search`의 페이지당 상한(50)만 확인했을 뿐 정확한 총 건수는 아님 —
-   "활동 있음(50 도달)/불명확" 수준의 근사치. (2026-09-11 업데이트: CQL에 `lastmodified >= now("-180d")`를
-   명시해 최소한 "180일 이내"라는 조건 자체는 정확하게 지켜지도록 수정함.)
+2. ~~Confluence 신호는 `confluence_search`의 페이지당 상한(50)만 확인했을 뿐 정확한 총 건수는 아님~~ —
+   **2026-09-16 해소**: 이 한계는 에이전트가 `mcp-atlassian`의 `confluence_search` 도구를 직접 호출한
+   경로에만 해당했다. `jira_confluence_signal.py`의 `confluence_count()`는 애초에 `_links.next`를
+   끝까지 따라가는 완전 페이지네이션이라 50건 상한이 없다 — gina.oh로 재확인 시 Confluence=94건이
+   정상 반환됨. 즉 REST 직접 수집 경로(스크립트)로는 이미 정확한 건수를 얻고 있었다. 상세:
+   `agent-action-items.md` A3, [scripts/dev_metrics/jira_confluence_expansion.py](scripts/dev_metrics/jira_confluence_expansion.py).
 3. `swpmviz` GitLab 그룹(`pvs_crawler` 등)은 SSH clone 권한은 있으나 이 계정의 GitLab API 조회 권한이
    없어(`404 Project Not Found`) `gitlab_signal.py`로 커밋/MR을 가져오지 못함 — SSH 키 기반 git 권한과
    GitLab 웹/API 멤버십이 분리되어 있는 것으로 보임. `swit` 프로젝트도 동일한 이유로 403/404 발생.

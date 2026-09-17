@@ -79,7 +79,7 @@ PROFILE_REPOS ?= $(REPOS)
 PROFILE_REPO_ARGS := --repos $(PROFILE_REPOS)
 GITHUB_LOGIN ?=
 
-.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review
+.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion
 
 help:
 	@echo "개발자 평가 메트릭 파이프라인 — 사용 가능한 타겟 (병합 후 정리, 2026-09-15)"
@@ -96,6 +96,7 @@ help:
 	@echo "== agent-action-items.md A1/A2 POC (Gerrit 라이브 조회) =="
 	@echo "  make review-quality    - 리뷰 코멘트 라인단위/스레드 비율 (메타데이터 전용, A1)"
 	@echo "  make cross-team-review - 오너 vs 리뷰 프로젝트 교차 참여 비율 (A2)"
+	@echo "  make jira-confluence-expansion - Jira 교차 프로젝트 참여율 + Confluence 타인 문서 코멘트 (A2/A3)"
 	@echo ""
 	@echo "== (B) 전문가 파인더 (Expert Finder, AGILEDEV-1132, 조직 전체 라우팅) =="
 	@echo "  make expert-finder    - git 기반 저장소/모듈별 전문가 랭킹 산출"
@@ -186,6 +187,11 @@ review-quality: $(OUT)
 cross-team-review: $(OUT)
 	uv run cross_team_review_signal.py $(GERRIT_SERVER_ARGS) --since-days 60 --limit-per-server 100 \
 		| tee $(OUT)/cross_team_review_$(DATE).txt
+
+jira-confluence-expansion: $(OUT)
+	uv run jira_confluence_expansion.py --env-file "$(JC_ENV)" --roster "$(JC_ROSTER)" \
+		--since-days $(SINCE_DAYS) --max-jira-issues 50 --max-comments-per-person 10 \
+		| tee $(OUT)/jira_confluence_expansion_$(DATE).txt
 
 expert-finder: $(OUT)
 	uv run expert_finder.py $(REPO_ARGS) --since-days $(SINCE_DAYS) --top 3 \
