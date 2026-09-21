@@ -205,10 +205,20 @@
 
 ## Tier 2 — 신규 API 연동/접근 권한이 선행되어야 함
 
-### B1. Codebeamer 연동 — REQ/SDD ↔ 코드 추적성 — 🔴 여전히 차단 (2026-09-16 확인)
+### B1. Codebeamer 연동 — REQ/SDD ↔ 코드 추적성 — 🟢 차단 해제, 1차 결과 확보 (2026-09-21)
 
-> `.env`/`secure_info.py`를 확인했으나 Codebeamer 관련 자격증명이 전혀 없다. 접근 권한 요청이
-> 선행되어야 한다(아래 "구체적 작업" 1번 그대로 유효).
+> 이 저장소의 `secure_info.py`에는 CB 자격증명이 없었지만, `../pvs_crawler`(사내 별도 프로젝트)의
+> `SWPMUtil/global_variables.py`에 CB 4개 인스턴스(`cb`/`vwcb`/`vscb`/`acb`) 접속 정보가 이미
+> 구현되어 있었고(공유 LDAP 계정 `ladp_idpw` 사용), 이를 재사용해 20명 로스터의 6개월치 활동을
+> 실제로 조회했다. 활동이 있던 사람: `vy4.nguyen`(1505건, Route/Antenna/Time Manager 영역 사실상
+> 단독 담당), `thai2.pham`(131건), `tuan3.pham`(130건, cTelltaleHmi 영역), `youngkyu.kang`(16건,
+> DTC/결함관리), `yaga.lee`/`jungmee.lee`/`dongdu.shin`(각 1건). 나머지 13명은 활동 없음.
+> 스냅샷을 `scripts/dev_metrics/codebeamer_signal_2026-09-21.json`으로 저장했고,
+> `codebeamer_traceability_signal.py`(`make codebeamer-traceability`)로 person x day x tracker
+> 집계 + 항목명에서 Jira 이슈 키(정규식) 추출까지 POC로 구현함. 단, **실시간 CBQL 배치 조회 자체는
+> 이 Makefile이 직접 하지 않음**(도메인당 조회에 수 분~15분 소요돼 반복 실행에 부적합) — 스냅샷은
+> `../pvs_crawler`에서 별도로 재생성해야 함. 아래 "구체적 작업" 3번(요구사항 ID 정규식 매칭)은
+> 1차로 구현됐고, 2번(Codebeamer↔Gerrit 연결 비율 계산)은 아직 미착수.
 
 
 

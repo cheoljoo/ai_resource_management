@@ -79,7 +79,7 @@ PROFILE_REPOS ?= $(REPOS)
 PROFILE_REPO_ARGS := --repos $(PROFILE_REPOS)
 GITHUB_LOGIN ?=
 
-.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion
+.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion codebeamer-traceability
 
 help:
 	@echo "개발자 평가 메트릭 파이프라인 — 사용 가능한 타겟 (병합 후 정리, 2026-09-15)"
@@ -196,6 +196,16 @@ jira-confluence-expansion: $(OUT)
 expert-finder: $(OUT)
 	uv run expert_finder.py $(REPO_ARGS) --since-days $(SINCE_DAYS) --top 3 \
 		| tee $(OUT)/expert_finder_$(DATE).txt
+
+# CB_SNAPSHOT: ../pvs_crawler의 CBQL 배치 조회로 미리 만든 스냅샷 JSON (실시간 조회는 이 Makefile이
+# 하지 않음 — codebeamer_traceability_signal.py 상단 docstring 참고). 기본값은 최근 생성분.
+CB_SNAPSHOT ?= codebeamer_signal_2026-09-21.json
+
+codebeamer-traceability: $(OUT)
+	uv run codebeamer_traceability_signal.py --snapshot $(CB_SNAPSHOT) \
+		| tee $(OUT)/codebeamer_traceability_$(DATE).json
+	uv run codebeamer_traceability_signal.py --snapshot $(CB_SNAPSHOT) --experts \
+		| tee $(OUT)/codebeamer_experts_$(DATE).json
 
 gerrit: $(OUT)
 	uv run gerrit_signal.py $(GERRIT_SERVER_ARGS) --since-days $(SINCE_DAYS) \
