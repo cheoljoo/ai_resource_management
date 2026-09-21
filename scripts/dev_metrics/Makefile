@@ -79,7 +79,7 @@ PROFILE_REPOS ?= $(REPOS)
 PROFILE_REPO_ARGS := --repos $(PROFILE_REPOS)
 GITHUB_LOGIN ?=
 
-.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion codebeamer-traceability
+.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion codebeamer-traceability jenkins
 
 help:
 	@echo "개발자 평가 메트릭 파이프라인 — 사용 가능한 타겟 (병합 후 정리, 2026-09-15)"
@@ -215,6 +215,14 @@ gerrit: $(OUT)
 	uv run gerrit_signal.py $(GERRIT_SERVER_ARGS) --since-days $(SINCE_DAYS) \
 		--limit-per-server $(GERRIT_LIMIT) --top 3 --json-out $(OUT)/gerrit_signal_$(DATE).json \
 		| tee $(OUT)/gerrit_signal_$(DATE).txt
+
+JENKINS_JOB_PATTERN ?= acp-master-engineering
+JENKINS_TOP ?= 20
+
+jenkins: $(OUT)
+	uv run jenkins_signal.py --job-pattern "$(JENKINS_JOB_PATTERN)" --since-days $(SINCE_DAYS) \
+		--top $(JENKINS_TOP) --json-out $(OUT)/jenkins_signal_$(DATE).json \
+		| tee $(OUT)/jenkins_signal_$(DATE).txt
 
 gitlab: $(OUT)
 	uv run gitlab_signal.py $(GITLAB_PROJECT_ARGS) --env-file "$(GITLAB_ENV)" \

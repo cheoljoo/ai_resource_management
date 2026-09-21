@@ -339,7 +339,19 @@
 
 ## Tier 3 — 신규 데이터 소스 발굴 (조사 선행)
 
-### C1. CI/CD 파이프라인 데이터 (배포 빈도·변경 실패율, DORA 지표 보강)
+### C1. CI/CD 파이프라인 데이터 (배포 빈도·변경 실패율, DORA 지표 보강) — 🟢 차단 해제, PoC 완료 (2026-09-21)
+
+> **조사 결과**: Confluence("[SCM][Seminar] CI/CD Infrastructure", pageId=3531826964,
+> Release Management Unit 페이지 pageId=2304443318)로 시스템을 특정 — webOS SCM의 CI/CD는
+> **Gerrit(gpro.lge.com, 이미 이 저장소 gerrit_conf_dict의 'gpro'와 동일 인스턴스) → Jenkins
+> (gecko.lge.com/jenkins/, Gerrit Trigger 플러그인)** 구조. **Jenkins REST API가 기존 공유 LDAP
+> 계정(secure_info.py의 ladp_idpw)으로 그대로 인증됨** — 별도 자격증명 요청이 필요 없었다.
+> [scripts/dev_metrics/jenkins_signal.py](scripts/dev_metrics/jenkins_signal.py)(`make jenkins`)로
+> job별 빌드 이력에서 배포 빈도·변경 실패율 PoC 검증 완료(전체 864개 job 중 `acp-master-engineering`
+> 패턴 11개 샘플, 180일). **한계**: 864개 job 중 실제 "운영 배포" 파이프라인과 "빌드/UT"만 하는
+> job이 섞여 있어 이름만으로는 구분이 안 됨 — 어떤 job이 실제 배포 파이프라인인지는 사용자 확인이
+> 필요(`--job-pattern`/`--job`으로 좁혀 쓰는 구조로 설계함). job(프로젝트) 단위 지표이며 개인 단위가
+> 아니다.
 
 - **Intent**: 지금까지의 지표는 코드/리뷰/이슈 메타데이터에 집중돼 있고, DORA의 핵심 지표인 "배포
   빈도"·"실제 운영 장애로 인한 실패율"은 아직 어떤 시스템에서 가져올지조차 조사되지 않았다.
