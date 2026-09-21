@@ -1,0 +1,281 @@
+[
+  {
+    "person": "andy55.han",
+    "repo": "/home/cheoljoo.lee/code/new_commit_review_violation_checker",
+    "repos": [
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker"
+    ],
+    "author": "andy55.han"
+  },
+  {
+    "person": "cheoljoo.lee",
+    "repo": "/home/cheoljoo.lee/code/LogAnalyzer",
+    "repos": [
+      "/home/cheoljoo.lee/code/LogAnalyzer",
+      "/home/cheoljoo.lee/code/sage-wiki",
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker",
+      "/home/cheoljoo.lee/code/ldap",
+      "/home/cheoljoo.lee/code/AutoTest_Cmd",
+      "/home/cheoljoo.lee/code/pvs_crawler_new",
+      "/home/cheoljoo.lee/code/swit",
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "cheoljoo.lee"
+  },
+  {
+    "person": "daehun.ju",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd",
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker"
+    ],
+    "author": "daehun.ju"
+  },
+  {
+    "person": "darrel.kang",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new"
+    ],
+    "author": "darrel.kang"
+  },
+  {
+    "person": "dongdu.shin",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd",
+      "/home/cheoljoo.lee/code/LogAnalyzer"
+    ],
+    "author": "dongdu.shin"
+  },
+  {
+    "person": "gina.oh",
+    "repo": "/home/cheoljoo.lee/code/pvs_trender",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_trender",
+      "/home/cheoljoo.lee/code/sage-wiki",
+      "/home/cheoljoo.lee/code/pvs_crawler"
+    ],
+    "author": "gina.oh"
+  },
+  {
+    "person": "gjh1007",
+    "repo": "/home/cheoljoo.lee/code/pvs_trender",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "gjh1007"
+  },
+  {
+    "person": "hakchoong.kim",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new"
+    ],
+    "author": "hakchoong.kim"
+  },
+  {
+    "person": "hohyeong12.seong",
+    "repo": "/home/cheoljoo.lee/code/pvs_trender",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "hohyeong12.seong"
+  },
+  {
+    "person": "hohyeong96.seong",
+    "repo": "/home/cheoljoo.lee/code/pvs_trender",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "hohyeong96.seong"
+  },
+  {
+    "person": "jaehong.jang",
+    "repo": "/home/cheoljoo.lee/code/pvs_trender",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "jaehong.jang"
+  },
+  {
+    "person": "jk.soh",
+    "repo": "/home/cheoljoo.lee/code/LogAnalyzer",
+    "repos": [
+      "/home/cheoljoo.lee/code/LogAnalyzer",
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker"
+    ],
+    "author": "jk.soh"
+  },
+  {
+    "person": "jongseok.won",
+    "repo": "/home/cheoljoo.lee/code/LogAnalyzer",
+    "repos": [
+      "/home/cheoljoo.lee/code/LogAnalyzer"
+    ],
+    "author": "jongseok.won"
+  },
+  {
+    "person": "jun.jo",
+    "repo": "/home/cheoljoo.lee/code/new_commit_review_violation_checker",
+    "repos": [
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker"
+    ],
+    "author": "jun.jo"
+  },
+  {
+    "person": "jungmee.lee",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new",
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "jungmee.lee"
+  },
+  {
+    "person": "juntae819.kim",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new"
+    ],
+    "author": "juntae819.kim"
+  },
+  {
+    "person": "juok.kim",
+    "repo": "/home/cheoljoo.lee/code/ldap",
+    "repos": [
+      "/home/cheoljoo.lee/code/ldap"
+    ],
+    "author": "juok.kim"
+  },
+  {
+    "person": "keyman.kim",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new",
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "keyman.kim"
+  },
+  {
+    "person": "kim.phan",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd"
+    ],
+    "author": "kim.phan"
+  },
+  {
+    "person": "sangjae0.lee",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new",
+      "/home/cheoljoo.lee/code/pvs_trender"
+    ],
+    "author": "sangjae0.lee"
+  },
+  {
+    "person": "sangkyu.lim",
+    "repo": "/home/cheoljoo.lee/code/new_commit_review_violation_checker",
+    "repos": [
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker"
+    ],
+    "author": "sangkyu.lim"
+  },
+  {
+    "person": "seungdae.goh",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd",
+      "/home/cheoljoo.lee/code/LogAnalyzer",
+      "/home/cheoljoo.lee/code/swit",
+      "/home/cheoljoo.lee/code/new_commit_review_violation_checker"
+    ],
+    "author": "seungdae.goh"
+  },
+  {
+    "person": "thai2.nguyen",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd"
+    ],
+    "author": "thai2.nguyen"
+  },
+  {
+    "person": "thai2.pham",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd"
+    ],
+    "author": "thai2.pham"
+  },
+  {
+    "person": "tuan3.pham",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd"
+    ],
+    "author": "tuan3.pham"
+  },
+  {
+    "person": "vy4.nguyen",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd",
+      "/home/cheoljoo.lee/code/swit"
+    ],
+    "author": "vy4.nguyen"
+  },
+  {
+    "person": "yaga.lee",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new"
+    ],
+    "author": "yaga.lee"
+  },
+  {
+    "person": "yoosang.won",
+    "repo": "/home/cheoljoo.lee/code/LogAnalyzer",
+    "repos": [
+      "/home/cheoljoo.lee/code/LogAnalyzer"
+    ],
+    "author": "yoosang.won"
+  },
+  {
+    "person": "youngjae.cho",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new"
+    ],
+    "author": "youngjae.cho"
+  },
+  {
+    "person": "youngkyu.kang",
+    "repo": "/home/cheoljoo.lee/code/AutoTest_Cmd",
+    "repos": [
+      "/home/cheoljoo.lee/code/AutoTest_Cmd",
+      "/home/cheoljoo.lee/code/swit",
+      "/home/cheoljoo.lee/code/LogAnalyzer"
+    ],
+    "author": "youngkyu.kang"
+  },
+  {
+    "person": "yuseok.kang",
+    "repo": "/home/cheoljoo.lee/code/pvs_crawler",
+    "repos": [
+      "/home/cheoljoo.lee/code/pvs_crawler",
+      "/home/cheoljoo.lee/code/pvs_crawler_new"
+    ],
+    "author": "yuseok.kang"
+  }
+]
