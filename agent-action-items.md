@@ -313,6 +313,27 @@
   - `steel-cdp-browse` 스킬로 로그인 자동화까지는 이미 검증됐으나(2026-09-07), 점검 시간대에 걸리면
     막힐 수 있으니 재시도 시 SMILE 점검 공지를 먼저 확인.
 
+### B6. Codebeamer 활동 ↔ Jira LLM_SUMMARY/LLM_QUERY 상관관계 — 🔴 차단 (2026-09-21 확인)
+
+> **사용자 아이디어**: B1의 person x day x tracker traceability에 Jira 이슈의 LLM 기반 요약
+> (`LLM_SUMMARY`)과 시맨틱 검색 로그(`LLM_QUERY`)를 합치면 "무엇을 했는지 + 그게 어떤 의미였는지"까지
+> 한눈에 보이지 않을까 하는 제안. 두 가지를 확인했고 둘 다 막혀 있다:
+>
+> 1. **표본이 너무 작음**: B1 스냅샷(1785건) 중 CB 항목 이름에서 Jira 이슈 키가 추출된 건 **1건(0.1%)**
+>    뿐. CB 항목과 Jira 이슈를 이을 다리가 사실상 없다 — CB 쪽이 Jira 키를 이름에 잘 남기지 않는다.
+> 2. **DB 접근 권한 없음**: "LLM_SUMMARY"/"LLM_QUERY"는 CodeBeamer가 아니라 `ticketsage`(AGILEDEV-864)
+>    프로젝트가 관리하는, Jira 이슈(ISSUE_ID) 키 기준의 사내 DB 테이블(`INFRABOARD.QCD_SAGE_LLM_QUERY`,
+>    `INFRABOARD.QCD_DL_ISSUE_ADDITIONAL_INFO`, `vcod.lge.com:3376`, MySQL)이었다. `secure_info.py`의
+>    `vcod_svc_db_hostidpw`(`QCD_USER`)로 DB 접속 자체는 성공했으나, 이 두 테이블은
+>    `SELECT command denied to user 'QCD_USER'@'...'`로 명시적으로 권한이 없다(`SHOW GRANTS`로 확인 —
+>    다른 여러 테이블엔 SELECT 권한이 있지만 이 둘은 없음. `ticketsage` 쪽이 별도 서비스 계정을 쓰는
+>    것으로 추정).
+>
+> **결론**: 이 방향은 (a) 애초에 CB↔Jira 연결고리가 거의 없고 (b) DB 접근 권한도 없어 이중으로 막혀
+> 있다. 진행하려면 `QCD_USER`에 두 테이블 SELECT 권한을 추가로 요청하거나(사내 DB 관리자 문의)
+> `ticketsage` 프로젝트가 쓰는 별도 계정을 빌려야 하고, 권한이 생기더라도 연결 가능한 CB 항목이
+> 애초에 적어 상관관계 분석의 가치가 제한적일 수 있다. 사용자 판단이 필요.
+
 ---
 
 ## Tier 3 — 신규 데이터 소스 발굴 (조사 선행)
