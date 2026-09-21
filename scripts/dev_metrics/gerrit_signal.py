@@ -8,7 +8,10 @@ uv run gerrit_signal.py --server na --server lamp --since-days 180
 uv run gerrit_signal.py --server na --limit-per-server 0 --json-out output/gerrit.json
 
 최근 갱신된 change를 조회한다. limit=0이면 전체 페이지를 조회한다.
-2026-09-15 사용자 승인: 댓글 API 응답의 본문은 즉시 버리고 메타데이터만 저장.
+2026-09-15 사용자 승인: 댓글 API 응답의 본문은 즉시 버리고 메타데이터만 저장(기본 동작).
+2026-09-21 사용자 승인(범위 한정): agent-action-items.md A1(리뷰 품질 "구체성" 판별)을 위해
+--include-comment-body를 명시적으로 켰을 때만 comments[].message를 함께 저장하도록 허용.
+기본값은 여전히 본문 미저장 — 이 플래그를 쓰지 않으면 2026-09-15 원칙 그대로 적용된다.
 라우팅 참고용이며 개인 성과 비교·평가로 전용하지 않는다.
 """
 from __future__ import annotations
@@ -148,7 +151,7 @@ def fetch_recent_changes(client: GerritClient, since_days: int, limit: int) -> t
         start += len(raw)
 
 
-def fetch_comments(client: GerritClient, number: int, robot: bool = False) -> list[dict] | None:
+def fetch_comments(client: GerritClient, number: int, robot: bool = False, include_body: bool = False) -> list[dict] | None:
     endpoint = f"{quote(str(number), safe='')}/{'robotcomments' if robot else 'comments'}"
     raw = client.get(endpoint, optional=robot)
     if raw is None and robot:
@@ -170,6 +173,8 @@ def fetch_comments(client: GerritClient, number: int, robot: bool = False) -> li
                 "id", "updated", "patch_set", "line", "side", "range", "in_reply_to",
                 "unresolved", "tag", "robot_id", "robot_run_id",
             ) if key in entry}
+            if include_body and "message" in entry:
+                metadata["message"] = entry["message"]
             metadata.update(path=path, author=account(entry.get("author")))
             comments.append(metadata)
     return comments
@@ -240,7 +245,7 @@ def aggregate(changes: list[dict], since_days: int, now: dt.datetime) -> dict:
     }
 
 
-def collect_signal(servers: list[str], since_days: int, limit_per_server: int) -> dict:
+def collect_signal(servers: list[str], since_days: int, limit_per_server: int, include_comment_body: bool = False) -> dict:
     conf = _load_gerrit_conf()
     now = dt.datetime.now(dt.timezone.utc)
     changes = []
@@ -255,7 +260,7 @@ def collect_signal(servers: list[str], since_days: int, limit_per_server: int) -
             if truncated:
                 truncated_servers.append(name)
             for index, change in enumerate(items, 1):
-                change["comments"] = fetch_comments(client, change["_number"])
+                change["comments"] = fetch_comments(client, change["_number"], include_body=include_comment_body)
                 change["robot_comments"] = (
                     None if name in robot_unavailable_servers else fetch_comments(client, change["_number"], robot=True)
                 )
@@ -274,7 +279,9 @@ def collect_signal(servers: list[str], since_days: int, limit_per_server: int) -
                 "votes는 현재 patch set 스냅샷이며 과거 투표 이벤트 전체가 아님. "
                 "messages는 시스템 이벤트 포함, comments는 모든 patch set의 공개 댓글. "
                 "자동화 계정은 사람이란 보장이 없으며 robot 댓글은 별도 집계. "
-                "본문은 저장하지 않음. 라우팅 전용, 개인 성과 비교·평가 금지.",
+                + ("comments[].message 포함(--include-comment-body, 2026-09-21 사용자 승인, A1 구체성 판별용). "
+                   if include_comment_body else "본문은 저장하지 않음. ")
+                + "라우팅 전용, 개인 성과 비교·평가 금지.",
         **aggregate(changes, since_days, now), "changes": changes,
     }
 
@@ -286,12 +293,14 @@ def main() -> int:
     parser.add_argument("--limit-per-server", type=int, default=300, help="서버당 change 상한 (0: 전체 조회)")
     parser.add_argument("--top", type=int, default=5, help="프로젝트별 owner 표시 인원")
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument("--include-comment-body", action="store_true",
+                         help="댓글 본문(message)도 저장 (2026-09-21 사용자 승인, A1 구체성 판별 전용 — 기본 꺼짐)")
     args = parser.parse_args()
     if args.since_days <= 0 or args.limit_per_server < 0 or args.top <= 0:
         parser.error("since-days/top은 양수, limit-per-server는 0 이상이어야 합니다.")
     try:
         servers = args.server or list(_load_gerrit_conf())
-        result = collect_signal(servers, args.since_days, args.limit_per_server)
+        result = collect_signal(servers, args.since_days, args.limit_per_server, args.include_comment_body)
         print(f"# Gerrit 상태: {result['status_counts']}")
         for change in result["changes"]:
             owner = person_key(change["owner"], change["server"]) or "unknown"
