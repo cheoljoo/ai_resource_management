@@ -11,7 +11,10 @@ uv run gerrit_signal.py --server na --limit-per-server 0 --json-out output/gerri
 2026-09-15 사용자 승인: 댓글 API 응답의 본문은 즉시 버리고 메타데이터만 저장(기본 동작).
 2026-09-21 사용자 승인(범위 한정): agent-action-items.md A1(리뷰 품질 "구체성" 판별)을 위해
 --include-comment-body를 명시적으로 켰을 때만 comments[].message를 함께 저장하도록 허용.
-기본값은 여전히 본문 미저장 — 이 플래그를 쓰지 않으면 2026-09-15 원칙 그대로 적용된다.
+같은 날 동일 원칙 적용으로, agent-action-items.md B1(Codebeamer↔Gerrit 연결 비율 계산)을 위해
+--include-subject를 켰을 때만 change의 commit subject(제목 한 줄)를 함께 저장하도록 허용 —
+본문(commit message body)은 여전히 저장하지 않는다, subject 한 줄만.
+기본값은 여전히 본문/제목 미저장 — 이 플래그들을 쓰지 않으면 2026-09-15 원칙 그대로 적용된다.
 라우팅 참고용이며 개인 성과 비교·평가로 전용하지 않는다.
 """
 from __future__ import annotations
@@ -87,14 +90,17 @@ def person_key(raw: dict, server: str) -> str | None:
             or (f"{server}:account:{raw['_account_id']}" if "_account_id" in raw else None))
 
 
-def change_metadata(raw: dict, server: str) -> dict:
-    """허용 목록만 복사: message/subject/description/본문은 결과에 넣지 않는다."""
+def change_metadata(raw: dict, server: str, include_subject: bool = False) -> dict:
+    """기본은 허용 목록만 복사: message/subject/description/본문은 결과에 넣지 않는다.
+    include_subject=True일 때만 subject(제목 한 줄)를 추가한다(2026-09-21 B1 승인, opt-in)."""
     result = {key: raw[key] for key in (
         "id", "_number", "project", "branch", "status", "created", "updated", "submitted",
         "total_comment_count", "unresolved_comment_count",
     ) if key in raw}
     if not raw.get("_number") or not raw.get("status"):
         raise CollectionError(f"[{server}] change 번호/status가 응답에 없습니다.")
+    if include_subject and "subject" in raw:
+        result["subject"] = raw["subject"]
     result.update(server=server, owner=account(raw.get("owner")),
                   submitter=account(raw.get("submitter")), merged=raw["status"] == "MERGED")
     result["submitter_known"] = bool(person_key(result["submitter"], server))
@@ -121,7 +127,7 @@ def change_metadata(raw: dict, server: str) -> dict:
     return result
 
 
-def fetch_recent_changes(client: GerritClient, since_days: int, limit: int) -> tuple[list[dict], bool]:
+def fetch_recent_changes(client: GerritClient, since_days: int, limit: int, include_subject: bool = False) -> tuple[list[dict], bool]:
     changes = []
     seen = set()
     start = 0
@@ -138,7 +144,7 @@ def fetch_recent_changes(client: GerritClient, since_days: int, limit: int) -> t
         more = bool(raw[-1].get("_more_changes"))
         previous_count = len(changes)
         for change in raw:
-            item = change_metadata(change, client.name)
+            item = change_metadata(change, client.name, include_subject)
             if item["_number"] not in seen:
                 seen.add(item["_number"])
                 changes.append(item)
@@ -245,7 +251,8 @@ def aggregate(changes: list[dict], since_days: int, now: dt.datetime) -> dict:
     }
 
 
-def collect_signal(servers: list[str], since_days: int, limit_per_server: int, include_comment_body: bool = False) -> dict:
+def collect_signal(servers: list[str], since_days: int, limit_per_server: int, include_comment_body: bool = False,
+                    include_subject: bool = False) -> dict:
     conf = _load_gerrit_conf()
     now = dt.datetime.now(dt.timezone.utc)
     changes = []
@@ -256,7 +263,7 @@ def collect_signal(servers: list[str], since_days: int, limit_per_server: int, i
             raise CollectionError(f"[{name}] Gerrit 설정이 없습니다.")
         client = GerritClient(name, conf[name])
         try:
-            items, truncated = fetch_recent_changes(client, since_days, limit_per_server)
+            items, truncated = fetch_recent_changes(client, since_days, limit_per_server, include_subject)
             if truncated:
                 truncated_servers.append(name)
             for index, change in enumerate(items, 1):
@@ -281,6 +288,8 @@ def collect_signal(servers: list[str], since_days: int, limit_per_server: int, i
                 "자동화 계정은 사람이란 보장이 없으며 robot 댓글은 별도 집계. "
                 + ("comments[].message 포함(--include-comment-body, 2026-09-21 사용자 승인, A1 구체성 판별용). "
                    if include_comment_body else "본문은 저장하지 않음. ")
+                + ("changes[].subject 포함(--include-subject, 2026-09-21 사용자 승인, B1 CB 연결 판별용). "
+                   if include_subject else "제목(subject)도 저장하지 않음. ")
                 + "라우팅 전용, 개인 성과 비교·평가 금지.",
         **aggregate(changes, since_days, now), "changes": changes,
     }
@@ -295,12 +304,14 @@ def main() -> int:
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--include-comment-body", action="store_true",
                          help="댓글 본문(message)도 저장 (2026-09-21 사용자 승인, A1 구체성 판별 전용 — 기본 꺼짐)")
+    parser.add_argument("--include-subject", action="store_true",
+                         help="change의 commit subject(제목 한 줄)도 저장 (2026-09-21 사용자 승인, B1 CB 연결 판별 전용 — 기본 꺼짐)")
     args = parser.parse_args()
     if args.since_days <= 0 or args.limit_per_server < 0 or args.top <= 0:
         parser.error("since-days/top은 양수, limit-per-server는 0 이상이어야 합니다.")
     try:
         servers = args.server or list(_load_gerrit_conf())
-        result = collect_signal(servers, args.since_days, args.limit_per_server, args.include_comment_body)
+        result = collect_signal(servers, args.since_days, args.limit_per_server, args.include_comment_body, args.include_subject)
         print(f"# Gerrit 상태: {result['status_counts']}")
         for change in result["changes"]:
             owner = person_key(change["owner"], change["server"]) or "unknown"

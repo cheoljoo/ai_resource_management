@@ -218,8 +218,15 @@
 > `codebeamer_traceability_signal.py`(`make codebeamer-traceability`)로 person x day x tracker
 > 집계 + 항목명에서 Jira 이슈 키(정규식) 추출까지 POC로 구현함. 단, **실시간 CBQL 배치 조회 자체는
 > 이 Makefile이 직접 하지 않음**(도메인당 조회에 수 분~15분 소요돼 반복 실행에 부적합) — 스냅샷은
-> `../pvs_crawler`에서 별도로 재생성해야 함. 아래 "구체적 작업" 3번(요구사항 ID 정규식 매칭)은
-> 1차로 구현됐고, 2번(Codebeamer↔Gerrit 연결 비율 계산)은 아직 미착수.
+> `../pvs_crawler`에서 별도로 재생성해야 함.
+>
+> **2026-09-21 추가 조사 — "구체적 작업" 2번(CB↔Gerrit 연결 비율)은 실측 결과 사실상 불가능으로 확인**:
+> `gerrit_signal.py --include-subject`(2026-09-21 사용자 승인, opt-in, B1 전용)로 commit subject를
+> 받아와 CB 항목 ID(숫자)와 na 서버 실제 200건 commit subject를 직접 대조했으나 **일치 0건**이었다.
+> commit subject는 `[ProjectTag][Module] 설명` 컨벤션(예: `[ConnectWide][LCM] Add logic to...`)만
+> 쓰고 있고, CB 항목 ID나 Jira 키를 넣는 관례 자체가 없었다 — B6(CB↔Jira LLM_SUMMARY)와 같은 유형의
+> "애초에 두 시스템을 잇는 식별자가 실무에서 쓰이지 않는" 결과. 이 방향은 여기서 접는다(사람이 CB
+> item ID를 commit에 남기도록 컨벤션을 새로 만들지 않는 한 데이터로 복구 불가능).
 
 
 
