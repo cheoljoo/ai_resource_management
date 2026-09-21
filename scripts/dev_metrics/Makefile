@@ -79,7 +79,7 @@ PROFILE_REPOS ?= $(REPOS)
 PROFILE_REPO_ARGS := --repos $(PROFILE_REPOS)
 GITHUB_LOGIN ?=
 
-.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion codebeamer-traceability jenkins
+.PHONY: help verify test-gerrit test-jira-confluence test-mr-pr expert-finder gerrit gitlab github mr-pr jira-confluence combine all jira-confluence-note clean profile activity-breadth monthly-clusters run-history github-activity test-adequacy review-quality cross-team-review jira-confluence-expansion codebeamer-traceability jenkins team-aggregate
 
 help:
 	@echo "개발자 평가 메트릭 파이프라인 — 사용 가능한 타겟 (병합 후 정리, 2026-09-15)"
@@ -157,6 +157,14 @@ test-mr-pr:
 profile: $(OUT)
 	uv run composite_signals.py --repo "$(PROFILE_REPO)" $(PROFILE_REPO_ARGS) --author "$(PROFILE_AUTHOR)" \
 		| tee $(OUT)/profile_$(DATE).txt
+
+# C2(AGILEDEV-1132, 2026-09-21 거버넌스 승인): 팀 단위 익명 집계. TEAM_ROSTER는 로스터 JSON 경로 —
+# person/repo/author 목록. 결과는 항상 익명 집계만 출력(team_aggregate_signals.py 자체 원칙).
+TEAM_ROSTER ?= team_roster.json
+
+team-aggregate: $(OUT)
+	uv run team_aggregate_signals.py --roster "$(TEAM_ROSTER)" \
+		| tee $(OUT)/team_aggregate_$(DATE).txt
 
 activity-breadth: $(OUT)
 	uv run activity_breadth.py $(PROFILE_REPO_ARGS) --author "$(PROFILE_AUTHOR)" \
