@@ -206,6 +206,10 @@ codebeamer-traceability: $(OUT)
 		| tee $(OUT)/codebeamer_traceability_$(DATE).json
 	uv run codebeamer_traceability_signal.py --snapshot $(CB_SNAPSHOT) --experts \
 		| tee $(OUT)/codebeamer_experts_$(DATE).json
+	uv run codebeamer_traceability_signal.py --snapshot $(CB_SNAPSHOT) --format markdown \
+		| tee $(OUT)/codebeamer_traceability_$(DATE).md
+	uv run codebeamer_traceability_signal.py --snapshot $(CB_SNAPSHOT) --experts --format markdown \
+		| tee $(OUT)/codebeamer_experts_$(DATE).md
 
 gerrit: $(OUT)
 	uv run gerrit_signal.py $(GERRIT_SERVER_ARGS) --since-days $(SINCE_DAYS) \

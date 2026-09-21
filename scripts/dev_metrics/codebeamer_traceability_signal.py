@@ -96,21 +96,49 @@ def tracker_experts(records: list[dict]) -> list[dict]:
     return rows
 
 
+def render_experts_markdown(rows: list[dict], top_n: int) -> str:
+    lines = [f"# CodeBeamer 영역별 전문가 (상위 {top_n}개 영역)", ""]
+    lines.append("| 도메인 | 트래커(영역) | 총 건수 | 상위 인물 |")
+    lines.append("|---|---|---|---|")
+    for r in rows[:top_n]:
+        top_str = ", ".join(f"{p}({c})" for p, c in r["top"])
+        lines.append(f"| {r['domain']} | {r['tracker']} | {r['total']} | {top_str} |")
+    return "\n".join(lines) + "\n"
+
+
+def render_person_day_markdown(rows: list[dict]) -> str:
+    lines = ["# CodeBeamer person x day x tracker traceability", ""]
+    lines.append("| 사람 | 날짜 | 도메인 | 트래커(영역) | 건수 | Jira 키 |")
+    lines.append("|---|---|---|---|---|---|")
+    for r in rows:
+        jira_str = ", ".join(r["jira_keys"]) if r["jira_keys"] else "-"
+        lines.append(f"| {r['person']} | {r['day']} | {r['domain']} | {r['tracker']} | {r['count']} | {jira_str} |")
+    return "\n".join(lines) + "\n"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--snapshot", required=True, help="codebeamer_signal_*.json 스냅샷 경로")
     parser.add_argument("--person", default=None, help="이 사람의 person x day x tracker 행만 출력")
     parser.add_argument("--experts", action="store_true", help="person x day 테이블 대신 영역별 전문가 랭킹만 출력")
+    parser.add_argument("--format", choices=["json", "markdown"], default="json", help="출력 형식 (기본 json)")
+    parser.add_argument("--top", type=int, default=20, help="--experts --format markdown일 때 표시할 영역 수 (기본 20)")
     args = parser.parse_args()
 
     records = load_snapshot(args.snapshot)
 
     if args.experts:
         result = tracker_experts(records)
+        if args.format == "markdown":
+            print(render_experts_markdown(result, args.top))
+            return
     else:
         result = build_person_day_tracker_table(records)
         if args.person:
             result = [r for r in result if r["person"] == args.person]
+        if args.format == "markdown":
+            print(render_person_day_markdown(result))
+            return
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
