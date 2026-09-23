@@ -15,15 +15,24 @@
 
 ## 2. 시스템 아키텍처 (개요)
 
-```
-[데이터 수집 레이어]
-  Jira / Confluence / Gerrit / GitHub / GitLab / Local git 수집기
-            ↓ (List[Activity])
-[통합 집계 레이어]
-  사용자별·날짜별 정규화, 통계 계산 (활동건수/활동일/유형별/소스별 분포)
-            ↓
-[출력]
-  JSON(raw) / CSV(피벗) / Markdown(개인별 worklog) → Jira Worklog API 자동 삽입
+```mermaid
+flowchart TD
+    subgraph Layer1["데이터 수집 레이어"]
+        Collectors["Jira / Confluence / Gerrit / GitHub / GitLab / Local git 수집기"]
+    end
+
+    subgraph Layer2["통합 집계 레이어"]
+        Aggregator["사용자별·날짜별 정규화 & 통계 계산<br/>(활동건수 / 활동일 / 유형별 / 소스별 분포)"]
+    end
+
+    subgraph Layer3["출력 레이어"]
+        Outputs["JSON (raw) / CSV (피벗) / Markdown (개인별 worklog)"]
+        JiraAPI["Jira Worklog API 자동 삽입"]
+    end
+
+    Collectors -->|"List[Activity]"| Aggregator
+    Aggregator --> Outputs
+    Outputs --> JiraAPI
 ```
 
 구현 모듈: Jira/Confluence 수집기, Gerrit/GitHub/GitLab/Local-git 수집기, 통합 집계기(+Jira worklog 자동 삽입 기능). Mock 데이터 기반 데모로 파이프라인 전체 동작을 검증했다.

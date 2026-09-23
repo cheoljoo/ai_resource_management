@@ -184,28 +184,34 @@ TOC
 
 ## 2. 시스템 아키텍처
 
-```
-┌──────────────────────────────────────────────────────┐
-│                  데이터 수집 레이어                    │
-│  JiraCollector  ConfluenceCollector  GerritCollector  │
-│  GitHubCollector  GitLabCollector  LocalGitCollector  │
-└────────────────────────┬─────────────────────────────┘
-                         │ List[Activity / VcsActivity]
-                         ▼
-┌──────────────────────────────────────────────────────┐
-│              통합 집계 (worklog_aggregator)           │
-│  - 사용자별 날짜별 정규화 (WorklogEntry)              │
-│  - 통계 계산 (활동건수, 활동일, 유형별/소스별 분포)   │
-└────────────────────────┬─────────────────────────────┘
-                         │
-          ┌──────────────┼──────────────┐
-          ▼              ▼              ▼
-     JSON Report    CSV Report    Markdown Report
-     (raw 전체)    (피벗 분석)   (사람별 worklog)
-                                        │
-                                        ▼
-                              Jira Worklog API 자동 삽입
-                         (POST /rest/api/latest/issue/{key}/worklog)
+```mermaid
+flowchart TD
+    subgraph Collectors["데이터 수집 레이어"]
+        C1["JiraCollector"]
+        C2["ConfluenceCollector"]
+        C3["GerritCollector"]
+        C4["GitHubCollector"]
+        C5["GitLabCollector"]
+        C6["LocalGitCollector"]
+    end
+
+    subgraph Aggregator["통합 집계 (worklog_aggregator)"]
+        Agg["• 사용자별 날짜별 정규화 (WorklogEntry)<br/>• 통계 계산 (활동건수, 활동일, 유형별/소스별 분포)"]
+    end
+
+    subgraph Reports["출력 레포트"]
+        R_JSON["JSON Report<br/>(raw 전체)"]
+        R_CSV["CSV Report<br/>(피벗 분석)"]
+        R_MD["Markdown Report<br/>(사람별 worklog)"]
+    end
+
+    subgraph Integration["Jira 연동"]
+        JiraAPI["Jira Worklog API 자동 삽입<br/>(POST /rest/api/latest/issue/{key}/worklog)"]
+    end
+
+    Collectors -->|"List[Activity / VcsActivity]"| Aggregator
+    Aggregator --> R_JSON & R_CSV & R_MD
+    R_MD --> JiraAPI
 ```
 
 ---
@@ -427,16 +433,41 @@ python demo_worklog.py
 
 ## 6. 개발팀 Worklog 스케줄 생성 정보 흐름 (종합)
 
-```
-[데이터 소스]                [수집 주기]    [생성 결과]
-─────────────────────────────────────────────────────────
-Jira (이슈·changelog)     → 1시간        →  개인별 일일 worklog
-Confluence (편집·댓글)    → 1시간        →  문서화 기여 통계
-Gerrit/GitHub/GitLab      → push webhook →  커밋·리뷰 실적
-Git local                 → 1일          →  미push 커밋 포함
-Calendar / Slack          → 1일          →  협업·미팅 참여
-HR 시스템 (휴가)          → 1일          →  정상 근무일 보정
-CI/CD 결과               → webhook      →  빌드 기여 품질
+```mermaid
+flowchart LR
+    subgraph Sources["데이터 소스"]
+        S_Jira["Jira (이슈/changelog)"]
+        S_Conf["Confluence (편집/댓글)"]
+        S_VCS["Gerrit / GitHub / GitLab"]
+        S_Local["Git local"]
+        S_Cal["Calendar / Slack"]
+        S_HR["HR 시스템 (휴가)"]
+        S_CI["CI/CD 결과"]
+    end
+
+    subgraph Cycles["수집 주기 / 방식"]
+        C_Hourly["1시간 주기 배치"]
+        C_Webhook["Push / Event Webhook"]
+        C_Daily["1일 주기 배치"]
+    end
+
+    subgraph Results["생성 결과"]
+        R_Worklog["개인별 일일 worklog"]
+        R_Doc["문서화 기여 통계"]
+        R_Review["커밋·리뷰 실적"]
+        R_Unpushed["미push 커밋 포함 실적"]
+        R_Collab["협업·미팅 참여 지표"]
+        R_Norm["정상 근무일 보정"]
+        R_Quality["빌드 기여 품질 지표"]
+    end
+
+    S_Jira --> C_Hourly --> R_Worklog
+    S_Conf --> C_Hourly --> R_Doc
+    S_VCS --> C_Webhook --> R_Review
+    S_Local --> C_Daily --> R_Unpushed
+    S_Cal --> C_Daily --> R_Collab
+    S_HR --> C_Daily --> R_Norm
+    S_CI --> C_Webhook --> R_Quality
 ```
 
 **최종 출력 형식 (사람별 일일 스케줄)**
@@ -1236,13 +1267,11 @@ Backstage는 Spotify가 2020년 오픈소스로 공개하고, 현재 **CNCF(Clou
 
 ### 추구하는 것 — "Speed Paradox" 해결
 
-```
-팀 규모 증가 → 인프라 파편화 → 개발 속도 저하
-          ↓
-중앙화된 Software Catalog 로
-  모든 서비스 / 팀 / 문서 / 툴을 한 곳에서 관리
-          ↓
-"표준화가 자율성을 제한하는 게 아니라, 오히려 속도를 높인다"
+```mermaid
+flowchart TD
+    P1["팀 규모 증가"] --> P2["인프라 파편화"] --> P3["개발 속도 저하<br/>(Speed Paradox ⚠️)"]
+    P3 -->|"해결"| Sol["중앙화된 Software Catalog<br/>모든 서비스 / 팀 / 문서 / 툴을 한 곳에서 관리"]
+    Sol --> Res["'표준화가 자율성을 제한하는 게 아니라,<br/>오히려 속도를 높인다'"]
 ```
 
 핵심 철학: **"The right way is also the easiest way"**
@@ -1435,24 +1464,19 @@ Backstage는 이 결과를 나중에 읽어와 표시할 뿐
 
 이것이 Backstage의 worklog 활용에서 **근본적인 약점**이다.
 
-```
-이상적인 Backstage worklog 흐름:
-  Backstage Template에서 작업 시작 (시작 시각 기록)
-          ↓
-  Jira/GitLab/Gerrit에서 실제 작업
-          ↓
-  Jira Done / MR Merged (종료 이벤트 감지)
-          ↓
-  시작~종료 = 소요 시간 계산
+```mermaid
+flowchart TD
+    subgraph Ideal["이상적인 Backstage worklog 흐름"]
+        I1["Backstage Template에서 작업 시작<br/>(시작 시각 자동 기록 ✅)"] --> I2["Jira / GitLab / Gerrit에서 실제 작업"]
+        I2 --> I3["Jira Done / MR Merged<br/>(종료 이벤트 자동 감지 ✅)"]
+        I3 --> I4["소요 시간 = 종료 시각 - 시작 시각<br/>(정확도 높음)"]
+    end
 
-현실:
-  아침에 직접 Jira 열고 작업 시작  ← Backstage 모름
-          ↓
-  점심에 GitLab push
-          ↓
-  오후에 Gerrit 리뷰
-          ↓
-  Backstage는 이 모든 것의 "결과"만 봄, 시작 시각 모름
+    subgraph Reality["현실적인 엔지니어링 흐름"]
+        R1["아침: 직접 Jira 열고 작업 시작<br/>(Backstage 모름 ❌)"] --> R2["점심: GitLab 직접 push"]
+        R2 --> R3["오후: Gerrit 리뷰 참여"]
+        R3 --> R4["Backstage는 '사후 결과'만 봄<br/>(시작 시각 누락 ⚠️)"]
+    end
 ```
 
 **Path를 강제하는 방법과 트레이드오프:**
@@ -1911,42 +1935,38 @@ Low     ★☆☆☆    < 1회/월      > 6개월      > 30%      > 6개월
 
 ### Google FourKeys 기본 구조
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                   이벤트 소스                                  │
-│  GitHub Webhook  │  GitHub Actions  │  PagerDuty  │  Jira   │
-└────────┬─────────┴────────┬─────────┴──────┬──────┴────┬────┘
-         │                  │                │           │
-         ▼                  ▼                ▼           ▼
-┌──────────────────────────────────────────────────────────────┐
-│           Google Cloud Pub/Sub (이벤트 버스)                   │
-│  topic: fourkeys-events                                      │
-└─────────────────────────┬────────────────────────────────────┘
-                          │
-                          ▼
-┌──────────────────────────────────────────────────────────────┐
-│          Cloud Run (이벤트 파서 / event-handler)              │
-│  - 이벤트 타입 분류 (deploy / incident / change)             │
-│  - 타임스탬프 정규화                                          │
-│  - 서비스/팀 태깅                                             │
-└─────────────────────────┬────────────────────────────────────┘
-                          │
-                          ▼
-┌──────────────────────────────────────────────────────────────┐
-│          BigQuery (이벤트 저장소)                             │
-│  테이블:                                                      │
-│    events_raw         ← 원본 이벤트 전체                     │
-│    deployments        ← 배포 이벤트 (정제)                   │
-│    incidents          ← 장애 이벤트 (정제)                   │
-│    changes            ← 코드 변경 이벤트 (정제)              │
-└─────────────────────────┬────────────────────────────────────┘
-                          │
-                          ▼
-┌──────────────────────────────────────────────────────────────┐
-│          Looker Studio / Grafana 대시보드                     │
-│  - DORA 4개 지표 실시간 시각화                               │
-│  - 팀별 / 서비스별 / 기간별 필터                             │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Sources["이벤트 소스"]
+        S_GH["GitHub Webhook"]
+        S_GA["GitHub Actions"]
+        S_PD["PagerDuty"]
+        S_Jira["Jira"]
+    end
+
+    subgraph Bus["Google Cloud Pub/Sub (이벤트 버스)"]
+        Topic["topic: fourkeys-events"]
+    end
+
+    subgraph Parser["Cloud Run (이벤트 파서 / event-handler)"]
+        Handler["• 이벤트 타입 분류 (deploy / incident / change)<br/>• 타임스탬프 정규화<br/>• 서비스/팀 태깅"]
+    end
+
+    subgraph Storage["BigQuery (이벤트 저장소)"]
+        T_Raw["events_raw (원본 이벤트 전체)"]
+        T_Dep["deployments (배포 이벤트 정제)"]
+        T_Inc["incidents (장애 이벤트 정제)"]
+        T_Chg["changes (코드 변경 이벤트 정제)"]
+    end
+
+    subgraph Dashboard["Looker Studio / Grafana 대시보드"]
+        Dash["• DORA 4개 지표 실시간 시각화<br/>• 팀별 / 서비스별 / 기간별 필터"]
+    end
+
+    S_GH & S_GA & S_PD & S_Jira --> Topic
+    Topic --> Handler
+    Handler --> T_Raw & T_Dep & T_Inc & T_Chg
+    T_Dep & T_Inc & T_Chg --> Dash
 ```
 
 ### GCS(Google Cloud Storage) 역할

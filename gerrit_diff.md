@@ -76,9 +76,11 @@ ORDER BY fix_count DESC, last_fix DESC;
 
 ## 파이프라인 흐름
 
-```
-Gerrit API          diff 파싱            정규화 저장           분석
-(merged changes) → (@@ 헤더 추출) → (file+function → DB) → (GROUP BY → re-fix 목록)
+```mermaid
+flowchart LR
+    Gerrit["Gerrit API<br/>(merged changes)"] -->|"diff 조회"| Parse["diff 파싱<br/>(@@ 헤더 함수 추출)"]
+    Parse -->|"정규화 저장"| DB[("정규화 DB<br/>file + function")]
+    DB -->|"GROUP BY 분석"| Report["분석 리포트<br/>(re-fix 목록)"]
 ```
 
 ### Gerrit REST API 엔드포인트
@@ -302,17 +304,18 @@ def fetch_daily_changes(gerrit_url: str, auth, target_date: date) -> list[dict]:
 
 ## 수집해야 할 이벤트 종류
 
-```
-change 1건당 발생하는 이벤트들:
-┌─────────────────────────────────────────────────────┐
-│ change_id │ event_type     │ actor  │ timestamp      │
-├───────────┼────────────────┼────────┼────────────────┤
-│ 12345     │ UPLOADED       │ alice  │ 2026-07-15 09  │  ← 최초 upload
-│ 12345     │ PATCHSET_ADDED │ alice  │ 2026-07-15 14  │  ← 수정 후 재업로드
-│ 12345     │ COMMENT        │ bob    │ 2026-07-15 15  │  ← 리뷰 코멘트
-│ 12345     │ VOTE           │ bob    │ 2026-07-15 15  │  ← Code-Review +2
-│ 12345     │ MERGED         │ system │ 2026-07-15 16  │  ← merge
-└─────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as alice (Owner)
+    actor Bob as bob (Reviewer)
+    participant Gerrit as Gerrit System
+
+    Alice->>Gerrit: UPLOADED (최초 upload 09:00)
+    Alice->>Gerrit: PATCHSET_ADDED (수정 후 재업로드 14:00)
+    Bob->>Gerrit: COMMENT (리뷰 코멘트 15:00)
+    Bob->>Gerrit: VOTE (Code-Review +2 15:00)
+    Gerrit->>Gerrit: MERGED (merge 완료 16:00)
 ```
 
 `messages` 배열에서 위 이벤트들을 파싱:

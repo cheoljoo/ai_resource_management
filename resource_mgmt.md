@@ -107,9 +107,19 @@ graph TD
 
 AI 엔진은 단일 시점 로그의 한계를 극복하기 위해 아래 4가지 기법을 결합하여 시작 시점을 추정합니다.
 
-```
-[활동 이벤트 A (10:00)] ---- (1.5h 연속 세션) ---- [활동 이벤트 B (11:30)] == (세션 인정)
-[활동 이벤트 B (11:30)] ---- (4.0h 휴지 구간) ---- [활동 이벤트 C (15:30)] == (세션 분리 / 자정·회의)
+```mermaid
+flowchart LR
+    subgraph Session1["세션 1 인정 (1.5시간 연속 몰입)"]
+        EvA["활동 이벤트 A<br/>(10:00)"] -->|"간격 1.5h<br/>(임계치 2h 이내)"| EvB["활동 이벤트 B<br/>(11:30)"]
+    end
+
+    subgraph Gap["휴지 구간 (세션 분리)"]
+        EvB -.->|"간격 4.0h<br/>(자정 / 식사 / 회의)"| EvC["활동 이벤트 C<br/>(15:30)"]
+    end
+
+    subgraph Session2["세션 2 시작"]
+        EvC --> EvNext["후속 활동..."]
+    end
 ```
 
 1. **이벤트 간격(Inter-Event Gap) 휴리스틱 & 세션 클러스터링** (git-hours 방식)
@@ -128,12 +138,12 @@ AI 엔진은 단일 시점 로그의 한계를 극복하기 위해 아래 4가�
 
 단순 사후 추정 모델의 한계를 극복하고 데이터 신뢰성을 보장하기 위해, **'자발적 자기 선언형(Self-Report) 도구'를 도입하여 확보한 정확한 Ground-Truth 데이터로 전체 추정 로직을 보정(Calibrate)하는 하이브리드 접근법**을 채택합니다.
 
-```
-[자기 선언형 데이터 (Ground-Truth)]
-     \
-      +---> [오차 분석 및 보정 Engine] ---> [이벤트 간격 임계값(Threshold) 개인별 동적 최적화]
-     /
-[AI 사후 추정 모델 (Approximation)]
+```mermaid
+flowchart LR
+    GT["자기 선언형 데이터<br/>(Ground-Truth)"] --> Engine
+    Approx["AI 사후 추정 모델<br/>(Approximation)"] --> Engine
+    
+    Engine["오차 분석 및 보정 Engine"] --> Opt["이벤트 간격 임계값 (Threshold)<br/>개인별 동적 최적화"]
 ```
 
 #### 1) 자기 선언형 Focus 세션 (Self-Declared Session)
@@ -238,12 +248,28 @@ $$\downarrow \text{LLM Multi-Signal Context & Session Calibration Engine}$$
 
 ### 5.1 절대 시간 대신 '상대 활동 비중 (%)' 중심 비교
 
-```
-[ 사전 계획 (Plan)  : A 프로젝트 70% 배정 / B 프로젝트 30% 배정 ] 
-                           VS
-[ 실제 추정 (Actual): A 프로젝트 40% 활동 / B 프로젝트 40% / 기타 지원 20% ] 
--------------------------------------------------------------------------
-  ---> 간극 (Gap) : A 프로젝트 -30%p (과소 투입) / 기타 지원 +20%p (지원 과다)
+```mermaid
+flowchart TD
+    subgraph Plan["사전 계획 (Planned Allocation)"]
+        P_A["A 프로젝트: 70%"]
+        P_B["B 프로젝트: 30%"]
+        P_Etc["기타 지원: 0%"]
+    end
+
+    subgraph Actual["실제 추정 (Actual Activity)"]
+        A_A["A 프로젝트: 40%"]
+        A_B["B 프로젝트: 40%"]
+        A_Etc["기타 지원: 20%"]
+    end
+
+    subgraph Gap["간극 분석 (Gap Analysis)"]
+        G_A["A 프로젝트: -30%p (과소 투입 ⚠️)"]
+        G_B["B 프로젝트: +10%p (초과)"]
+        G_Etc["기타 지원: +20%p (비가시 공수 차출 ⚠️)"]
+    end
+
+    Plan -.->|"대조 비교"| Actual
+    Actual ==> Gap
 ```
 
 * **원인 1: POC 및 선행 검증 지연 (POC Overhead)**
